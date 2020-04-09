@@ -1,0 +1,149 @@
+
+  div.card {
+    display: inline-block;
+    background-image: url('cards.png');
+    background-repeat: no-repeat;
+    height: 80px;
+    width: 60px;
+  }
+
+  div.hand {
+    display: inline-block;
+    height: 80px;
+  }
+
+  div.shrink {
+    transform: scale(0.5);
+    transform-origin: 0 0;
+  }
+
+  div.board {
+    display: block;
+    height: 80px;
+  }
+
+  div.cardbg {
+    background-image: url('cardbg.png');
+    background-size: 60px 80px;
+    background-repeat: repeat;
+    width: 60px;
+    height: 80px;
+    display: inline-block;
+  }
+
+  div.hand .card:not(:first-child) {
+    margin-left: -30px;
+  }
+
+  ul.pile {
+    vertical-align: bottom;
+    display: inline-block;
+    position: relative;
+    list-style-type: none;
+    left: 5px;
+    height: 154px;
+    width: 129px;
+    margin: 0;
+    padding: 0;
+  }
+
+  ul.pile li {
+    padding: 0;
+    margin: 0;
+    position: relative;
+    width: 129px;
+  }
+  ul.pile li:not(:first-child) {
+    margin-top: -10px;
+    height: 5px;
+  }
+
+  ul.pile li:first-child {
+    margin-top: 50px;
+    height: 45px;
+  }
+
+  div.chip {
+    display: inline-block;
+    background-image: url('allchips.png');
+    background-repeat: no-repeat;
+    width: 129px;
+    height: 59px;
+  }
+
+  div.playerinfo {
+    position: absolute;
+    display: inline-block;
+    background-color: #ffffffaa;
+    border: 3px solid black;
+    border-radius: 10px;
+    width: 220px;
+    height: 130px;
+    transform-origin: 0 0;
+    transform: scale(0.8);
+    margin-left: -110px;
+  }
+
+  div.playername {
+    padding: 5pt;
+    font-size: 120%;
+    font-weight: bold;
+    height: 24px;
+  }
+  div.playername > tt {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    font-weight: bold;
+    font-size: 20px;
+    color: darkred;
+  }
+
+  div.playerbet {
+    position: absolute;
+    display: inline-block;
+    text-align: right;
+    padding: 5px;
+    height: 40px;
+    width: 220px;
+    margin-left: -75px;
+  }
+
+  div.smallpiles {
+    width: 1200px;
+    height: 120px;
+    position: relative;
+    text-align: left;
+    transform: scale(0.20);
+    transform-origin: 0 0;
+  }
+
+  div.playerstate {
+    padding: 10px;
+    text-align: left;
+    font-weight: bold;
+    vertical-align: top;
+  }
+  div.playerhand {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    transform-origin: 100% 100%;
+    transform: scale(0.4);
+  }
+
+  div.playerpiles {
+    position: relative;
+    padding: 5px;
+    height: 40px;
+    width: 220px;
+  }
+
+  div.pokertable {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    background-image: url('feltbg.png');
+    height: 600px;
+    width: 1000px;
+  }
