@@ -1,0 +1,8 @@
+Hmmmm -
+
+"Encrypt" players' cards using their "passwords"? That could be a pretty nifty way to
+give the same document to every player w/o leaking each card ... Saving a shitload of
+programming and calls!
+
+Salt using hand ID (random) + password, so that if a person gets the same hand twice,
+it's not recognizable.

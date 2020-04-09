@@ -1,0 +1,21 @@
+th {
+  text-align: right;
+  vertical-align: top;
+}
+tr {
+  padding: 5px;
+  border: 2px solid gray;
+}
+tr:nth-child(even) {
+  background-color: #ddffdd;
+}
+tr:nth-child(odd) {
+  background-color: #ddddff;
+}
+td,th {
+  padding: 5px;
+}
+
+input {
+  width: 800px;
+}
