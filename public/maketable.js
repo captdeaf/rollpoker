@@ -1,13 +1,17 @@
 $(document).ready(function() {
   $("#creategame").click(function() {
-    alert("ok");
+    var data = {}
+    _.each($('#gamesettings').serializeArray(), function(fd) {
+      data[fd.name] = fd.value;
+    });
+    console.log(data);
     $.ajax({
       url: '/MakeTable',
       type: 'POST',
       dataType: 'json',
-      data: $('#gamesettings').serialize(),
+      data: JSON.stringify(data),
       success: function(result) {
-        alert(result);
+        console.log(result);
       },
       error: function(xhr, resp, text) {
         console.log(xhr, resp, text);

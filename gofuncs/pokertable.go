@@ -6,7 +6,7 @@ import (
 	"context"
 	"log"
 	"net/http"
-	// "encoding/json"
+	"encoding/json"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/option"
@@ -50,7 +50,7 @@ type GameLog struct {
 type GameState struct {
 	Running		bool
 	Blinds		[]int
-	BlindTime	uint64
+	BlindTime	int
 	Pot		int
 	Deck		[]string
 	GameEvents	[]GameEvent
@@ -58,13 +58,11 @@ type GameState struct {
 }
 
 type Game struct {
-	Players		map[int] Player
+	Players		map[string] Player
 	State		GameState
 	Settings	GameSettings
-	Body		string
-	// Timestamps for clearing from database
-	CreatedAt	uint64
-	UpdatedAt	uint64
+	CreatedAt	int
+	UpdatedAt	int
 }
 
 type GameCommand struct {
@@ -91,36 +89,104 @@ func init() {
 	fmt.Println("Rollpoker started")
 }
 
-type Foo struct {
+type GameResponse struct {
 	Name string
 }
 
+func GenerateNewName() string {
+	return "OrangePanda"
+}
+
 func MakeTable(w http.ResponseWriter, r *http.Request) {
-	gamesRef := client.Doc("games/OrangeShipwreck")
-	ctx := context.Background()
-	fmt.Println(gamesRef)
-	gd, err := gamesRef.Get(ctx)
-	fmt.Println(gd)
-	fmt.Println(gd.Data())
-	if err != nil {
-		log.Fatalf("Can't get snapshot: %v", err)
-		return
-	}
-	var g *Foo
-	err = gd.DataTo(&g)
-	if err != nil {
-		log.Fatalf("No datato avail: %v", err)
-		return
-	}
+	var settings GameSettings
 
-	// TODO: Sanity Checking
-	fmt.Fprintf(w, "Welcome %s", g.Name)
-
-	/*
-	err = json.NewDecoder(r.Body).Decode(&settings)
+	err := json.NewDecoder(r.Body).Decode(&settings)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	*/
+
+	var newgr GameResponse
+
+	newgr.Name = GenerateNewName()
+
+	var newgame Game
+
+	newgame.State.Running = false
+	newgame.State.BlindTime = 0
+	newgame.State.Pot = 0
+	newgame.Settings = settings
+	newgame.CreatedAt = 0
+	newgame.UpdatedAt = 0
+
+	_, err = client.Doc("games/" + newgr.Name).Set(context.Background(), newgame)
+
+	if err != nil {
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	bytes, err := json.Marshal(newgr)
+	w.Write(bytes)
 }
+
+type GetStateRequest struct {
+	Name		string
+	Last		int
+	Player		string
+	PlayerPass	string
+}
+
+func FetchGame(name string) *Game {
+	var game Game
+	gamesRef := client.Doc("games/" + name)
+	ctx := context.Background()
+	gd, err := gamesRef.Get(ctx)
+	fmt.Println(gd.Data())
+	if err != nil {
+		log.Fatalf("Can't get snapshot: %v", err)
+		return nil
+	}
+	err = gd.DataTo(&game)
+	if err != nil {
+		log.Fatalf("No datato avail: %v", err)
+		return nil
+	}
+	return &game
+}
+
+func GetState(w http.ResponseWriter, r *http.Request) {
+	var gsr GetStateRequest
+	err := json.NewDecoder(r.Body).Decode(&gsr)
+
+	if err != nil {
+		// http.Error(w, err.Error(), http.StatusBadRequest)
+		// return
+		gsr.Name = "OrangePanda"
+		gsr.Last = 0
+	}
+
+	// TODO: Sanity checking on GSR.
+	if gsr.Player == "" {
+		fmt.Println("Player is nil, hasn't joined")
+	}
+
+	game := FetchGame(gsr.Name)
+	if game == nil {
+		http.Error(w, "Unknown Game", http.StatusBadRequest)
+		return
+	}
+
+
+	// TODO: Sanity Checking
+	fmt.Println(game.Settings.GameName)
+	fmt.Fprintf(w, "{}")
+}
+
+func Poker(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "{}")
+}
+
+
