@@ -1,11 +1,11 @@
 Describes the JSON Object encapsulating an entire game.
 
+Document Index: // The game name, auto-generated, with settings.
 {
-  gamename: "path", // The game name, auto-generated, with settings.
-  settings: {}, // All settings. For, e.g: Game type, chip types, starting
+  Settings: {}, // All settings. For, e.g: Game type, chip types, starting
                 // counts, pot limit, no limit, etc.
-  players: {
-    1: { // Seat #, 1-10 (Yes, 1-based).
+  Players: {
+    s1: { // Seat #, 0-9
       email: "address@foo.com", // For sending reconnect links and logs.
       display name: "", // "Greg", "Sank", "Prawn", etc.
       chips: 1234, // Current chip count

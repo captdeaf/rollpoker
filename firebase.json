@@ -5,6 +5,10 @@
       {
         "source": "/table/*",
         "destination": "/table.html"
+      },
+      {
+        "source": "/MakeTable",
+        "function": "MakeTable"
       }
     ],
     "ignore": [

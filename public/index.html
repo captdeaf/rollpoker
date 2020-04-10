@@ -19,20 +19,21 @@
     <br>
     Initial settings for the game (these can be changed at any time):<br>
     <br>
+    <form id="gamesettings">
     <table>
       <tr>
         <th>Game Type</th>
         <td>
-          <select name="gametype">
-            <option value="texasnl">Texas Hold'em</option>
-            <option value="omahanl">Omaha Hold'em</option>
+          <select name="GameName">
+            <option value="texasholdem">Texas Hold'em</option>
+            <option value="omahaholdem">Omaha Hold'em</option>
           </select>
         </td>
       </tr>
       <tr>
         <th>Game Style</th>
         <td>
-          <select name="gamestyle">
+          <select name="GameType">
             <option value="sitngo">Sit-n-Go</option>
             <option value="cash">Cash-in Cash-out</option>
           </select>
@@ -41,7 +42,7 @@
       <tr>
         <th>Betting Structure</th>
         <td>
-          <select name="bets">
+          <select name="BetLimit">
             <option value="nolimit">No Limit</option>
             <option value="potlimit">Pot Limit</option>
           </select>
@@ -49,29 +50,31 @@
       </tr>
       <tr>
         <th>Starting Chip Count</th>
-        <td><input type="text" name="chips" value="2000"></td>
+        <td><input type="text" name="StartingChips" value="2000"></td>
       </tr>
       <tr>
         <th>Starting Blinds</th>
         <td>
-          <input type="text" name="blinds" value="25 50">
+          <input type="text" name="StartBlinds" value="25 50">
         </td>
       </tr>
       <tr>
         <th>Chip Values</th>
         <td>
           White Red Blue Green Black Yellow<br>
-          <input type="text" name="chipvalues" value="25 100 500 1000 5000 25000">
+          <input type="text" name="ChipValues" value="25 100 500 1000 5000 25000">
         </td>
       </tr>
       <tr>
         <th>(SNG) Betting Structure</th>
-        <td><input type="text" name="bettingstructure" value="25 50,25 75,50 100,75 150,100 200,150 300,200 400,300 600,500 1000,1000 2000"></td>
+        <td><input type="text" name="BlindStructure" value="25 50,25 75,50 100,75 150,100 200,150 300,200 400,300 600,500 1000,1000 2000"></td>
       </tr>
       <tr>
         <th>(SNG) Blinds durations</th>
-        <td><input type="text" name="blindtimes" value="40 40 40 20"></td>
+        <td><input type="text" name="BlindDurations" value="40 40 40 20"></td>
       </tr>
     </table>
+    </form>
+    <button id="creategame">Create Poker Game</button>
   </body>
 </html>

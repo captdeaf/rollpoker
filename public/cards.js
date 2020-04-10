@@ -11,10 +11,10 @@ function onBodyLoad() {
   }
 
   for (var i = 0 ; i < 13; i++) {
-    makeCard(i, 0, "spade" + (i+1));
-    makeCard(i, 1, "club" + (i+1));
-    makeCard(i, 2, "diamond" + (i+1));
-    makeCard(i, 3, "heart" + (i+1));
+    makeCard(i, 0, "s" + (i+1));
+    makeCard(i, 1, "c" + (i+1));
+    makeCard(i, 2, "d" + (i+1));
+    makeCard(i, 3, "h" + (i+1));
   }
 
   var chipValues = [];
@@ -76,11 +76,18 @@ function onBodyLoad() {
     betdiv.html(piles);
   }
 
-  populatePlayerInfo("player2", {
-    name: "Chris",
-    chips: 3096,
+  populatePlayerInfo("player1", {
+    name: "Prawn",
+    chips: 1500,
     state: "Folded",
-    cards: ["cardbg","cardbg"],
+    cards: ["h13","h12"],
+  });
+
+  populatePlayerInfo("player2", {
+    name: "Rob",
+    chips: 1500,
+    state: "All In",
+    cards: ["h2","s7"],
   });
 
   populatePlayerInfo("player4", {
@@ -90,16 +97,23 @@ function onBodyLoad() {
     cards: ["cardbg","cardbg"],
   });
 
+  populatePlayerInfo("player6", {
+    name: "Nick",
+    chips: 1500,
+    state: "Lunatic",
+    cards: ["cardbg","cardbg"],
+  });
+
   populatePlayerInfo("player8", {
     name: "Sank",
-    chips: 1200,
+    chips: 1500,
     state: "Folded",
     cards: ["cardbg","cardbg"],
   });
 
   populatePlayerInfo("player10", {
     name: "Nesmith",
-    chips: 18,
+    chips: 1500,
     state: "Folded",
     cards: ["cardbg","cardbg"],
   });

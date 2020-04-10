@@ -40,8 +40,9 @@
     <div class="playerpiles">&nbsp;</div>
     <div class="playerstate"><%= state %></div>
     <div class="playerhand hand">
-      <div class="card cardbg"></div>
-      <div class="card cardbg"></div>
+      <% for (var i = 0; i < cards.length; i++) { %>
+        <div class="card <%= cards[i] %>"></div>
+      <% } %>
     </div>
   </script>
   </body>

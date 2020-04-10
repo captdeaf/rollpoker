@@ -24,7 +24,7 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/", rollpoker.MakeTable)
+	http.HandleFunc("/MakeTable", rollpoker.MakeTable)
 
 	port := os.Getenv("PORT")
 	if port == "" {
