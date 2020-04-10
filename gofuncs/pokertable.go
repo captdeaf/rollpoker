@@ -31,10 +31,20 @@ type Player struct {
 	Chips		int
 
 	// Current hand info:
-	State		string
+	State		int
 	Hand		string
 	Bet		int // Current amount bet // not in the pot.
 }
+
+const (
+	BUSTED = iota // Never changes unless restart or cash buyin.
+	FOLDED	// Out of this hand
+
+	WAITING // Hasn't had their turn yet.
+	BET	// Bet or raised
+	CALLED	// All players but one must be CALLED (or ALLIN)
+	ALLIN   // Has no more chips left.
+)
 
 type GameEvent struct {
 	EventId		int
@@ -73,6 +83,7 @@ type GameCommand struct {
 var client *firestore.Client
 
 func init() {
+	fmt.Printf("Waiting %d and Busted %d", WAITING, BUSTED)
 	ctx := context.Background()
 	var err error
 	_, err = os.Stat("firebase-key.json")

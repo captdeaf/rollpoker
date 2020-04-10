@@ -94,28 +94,28 @@ function onBodyLoad() {
     name: "Greg",
     chips: 1500,
     state: "Folded",
-    cards: ["cardbg","cardbg"],
+    cards: ["bg","bg"],
   });
 
   populatePlayerInfo("player6", {
     name: "Nick",
     chips: 1500,
     state: "Lunatic",
-    cards: ["cardbg","cardbg"],
+    cards: ["bg","bg"],
   });
 
   populatePlayerInfo("player8", {
     name: "Sank",
     chips: 1500,
     state: "Folded",
-    cards: ["cardbg","cardbg"],
+    cards: ["bg","bg"],
   });
 
   populatePlayerInfo("player10", {
     name: "Nesmith",
     chips: 1500,
     state: "Folded",
-    cards: ["cardbg","cardbg"],
+    cards: ["bg","bg"],
   });
 
   for (var i = 1; i <= 10; i++) {

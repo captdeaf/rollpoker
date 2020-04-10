@@ -22,7 +22,7 @@
     height: 80px;
   }
 
-  div.cardbg {
+  div.bg {
     background-image: url('/cardbg.png');
     background-size: 60px 80px;
     background-repeat: repeat;
