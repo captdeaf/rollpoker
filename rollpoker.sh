@@ -10,13 +10,18 @@ case "$1" in
     (cd gofuncs ; go build -o gfhost host/main.go) && ./gofuncs/gfhost
     ;;
   webhost)
-    (./firebase serve --only hosting)
+    (firebase serve --only hosting)
+    ;;
+  webdeploy)
+    # Deploy public/ to firebase
+    firebase deploy
+    # And deploy gofuncs to gcloud functions
+    ;;
+  godeploy)
+    (cd gofuncs ; gcloud functions deploy $funcs --runtime go111 --trigger-http --allow-unauthenticated)
     ;;
   deploy)
-    # Deploy public/ to firebase
-    ./firebase deploy
-    # And deploy gofuncs to gcloud functions
-    (cd gofuncs ; gcloud functions deploy $funcs --runtime go111 --trigger-http --allow-unauthenticated)
+    $0 webdeploy && $0 godeploy
     ;;
   *)
     echo "Usage: ./$0 deploy"

@@ -1,11 +1,12 @@
 package rollpoker
 
 import (
+	"os"
 	"fmt"
 	"context"
 	"log"
 	"net/http"
-	"encoding/json"
+	// "encoding/json"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/option"
@@ -75,17 +76,28 @@ var client *firestore.Client
 
 func init() {
 	ctx := context.Background()
-	opt := option.WithCredentialsFile("firebase-key.json")
 	var err error
-	client, err = firestore.NewClient(ctx, "rollpoker", opt)
+	_, err = os.Stat("firebase-key.json")
+	if err == nil {
+		opt := option.WithCredentialsFile("firebase-key.json")
+		client, err = firestore.NewClient(ctx, "rollpoker", opt)
+	} else {
+		client, err = firestore.NewClient(ctx, "rollpoker")
+	}
 	if err != nil {
 		log.Fatalf("Can't get client: %v", err)
 		return
 	}
 	fmt.Println("Rollpoker started")
+}
 
-	/*
+type Foo struct {
+	Name string
+}
+
+func MakeTable(w http.ResponseWriter, r *http.Request) {
 	gamesRef := client.Doc("games/OrangeShipwreck")
+	ctx := context.Background()
 	fmt.Println(gamesRef)
 	gd, err := gamesRef.Get(ctx)
 	fmt.Println(gd)
@@ -94,27 +106,21 @@ func init() {
 		log.Fatalf("Can't get snapshot: %v", err)
 		return
 	}
-	var g *Game
+	var g *Foo
 	err = gd.DataTo(&g)
 	if err != nil {
 		log.Fatalf("No datato avail: %v", err)
 		return
 	}
-	fmt.Println("Got: ",g.Name)
-	*/
-}
 
-func MakeTable(w http.ResponseWriter, r *http.Request) {
-	var settings GameSettings;
+	// TODO: Sanity Checking
+	fmt.Fprintf(w, "Welcome %s", g.Name)
 
-	newname := "JealousPanda"
-
-	err := json.NewDecoder(r.Body).Decode(&settings)
+	/*
+	err = json.NewDecoder(r.Body).Decode(&settings)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	// TODO: Sanity Checking
-	fmt.Fprintf(w, "Welcome %s", newname)
+	*/
 }
