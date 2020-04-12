@@ -3,39 +3,56 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <head>
-    <link rel="stylesheet" type="text/css" href="/cards.css" />
+    <link rel="stylesheet" type="text/css" href="/poker.css" />
   <script type="text/javascript" src="/underscore-min.js"></script>
   <script type="text/javascript" src="/jquery-3.4.1.min.js"></script>
-  <script type="text/javascript" src="/cards.js"></script>
+  <script type="text/javascript" src="/tablerender.js"></script>
+  <script type="text/javascript" src="/signup.js"></script>
+  <script type="text/javascript" src="/gamestate.js"></script>
   </head>
-  <body onLoad="onBodyLoad()">
+  <script type="text/template" id="tabletpl">
     <div class="pokertable">
       <!-- Top row -->
-      <div id="player1"  class="playerinfo" style="top: 5%; left: 25%;"></div>
-        <div id="player1bet" class="playerbet" style="top: 26%; left: 32%;"></div>
-      <div id="player2"  class="playerinfo" style="top: 5%; left: 50%;"></div>
-        <div id="player2bet"  class="playerbet" style="top: 26%; left: 50%;"></div>
-      <div id="player3"  class="playerinfo" style="top: 5%; left: 75%;"></div>
-        <div id="player3bet"  class="playerbet" style="top: 26%; left: 68%;"></div>
+      <div class="player1 playerinfo" style="top: 5%; left: 25%;"></div>
+        <div class="player1bet playerbet" style="top: 26%; left: 32%;"></div>
+      <div class="player2 playerinfo" style="top: 5%; left: 50%;"></div>
+        <div class="player2bet playerbet" style="top: 26%; left: 50%;"></div>
+      <div class="player3 playerinfo" style="top: 5%; left: 75%;"></div>
+        <div class="player3bet playerbet" style="top: 26%; left: 68%;"></div>
       <!-- Right side -->
-      <div id="player4"  class="playerinfo" style="top: 28%; left: 85%;"></div>
-        <div id="player4bet"  class="playerbet" style="top: 42%; left: 70%;"></div>
-      <div id="player5"  class="playerinfo" style="top: 52%; left: 85%;"></div>
-        <div id="player5bet"  class="playerbet" style="top: 52%; left: 70%;"></div>
+      <div class="player4 playerinfo" style="top: 28%; left: 85%;"></div>
+        <div class="player4bet playerbet" style="top: 42%; left: 70%;"></div>
+      <div class="player5 playerinfo" style="top: 52%; left: 85%;"></div>
+        <div class="player5bet playerbet" style="top: 52%; left: 70%;"></div>
       <!-- Bottom row -->
-      <div id="player6"  class="playerinfo" style="top: 75%; left: 75%;"></div>
-        <div id="player6bet"  class="playerbet" style="top: 68%; left: 68%;"></div>
-      <div id="player7"  class="playerinfo" style="top: 75%; left: 50%;"></div>
-        <div id="player7bet"  class="playerbet" style="top: 68%; left: 50%;"></div>
-      <div id="player8"  class="playerinfo" style="top: 75%; left: 25%;"></div>
-        <div id="player8bet"  class="playerbet" style="top: 68%; left: 32%;"></div>
+      <div class="player6 playerinfo" style="top: 75%; left: 75%;"></div>
+        <div class="player6bet playerbet" style="top: 68%; left: 68%;"></div>
+      <div class="player7 playerinfo" style="top: 75%; left: 50%;"></div>
+        <div class="player7bet playerbet" style="top: 68%; left: 50%;"></div>
+      <div class="player8 playerinfo" style="top: 75%; left: 25%;"></div>
+        <div class="player8bet playerbet" style="top: 68%; left: 32%;"></div>
       <!-- Left side -->
-      <div id="player9"  class="playerinfo" style="top: 52%; left: 15%;"></div>
-        <div id="player9bet"  class="playerbet" style="top: 52%; left: 30%; text-align: left;"></div>
-      <div id="player10" class="playerinfo" style="top: 28%; left: 15%;"></div>
-        <div id="player10bet" class="playerbet" style="top: 42%; left: 30%; text-align: left;"></div>
+      <div class="player9 playerinfo" style="top: 52%; left: 15%;"></div>
+        <div class="player9bet playerbet" style="top: 52%; left: 30%; text-align: left;"></div>
+      <div class="player10 playerinfo" style="top: 28%; left: 15%;"></div>
+        <div class="player10bet playerbet" style="top: 42%; left: 30%; text-align: left;"></div>
     </div>
-  <script type="text/template" id="playertpl" style="display: none;">
+  </script>
+  <script type="text/template" id="signuptpl">
+    <h3>Players currently involved:</h3>
+    <ul class="signuplist">
+    </ul><br>
+    <div id="joingamediv" class="gamebutton" style="width: 400px; padding: 0.5em; border: 1px solid black;">
+    <form id="joingameform">
+      <input type="text" name="DisplayName" placeholder="Display Name" value=""><br>
+      <input type="text" name="Email" placeholder="Email Address" value=""><br><i>We only use your email address once, to send a sign-in link to, it is never saved..</i><br>
+      <button id="joingame">Join the Game</button>
+    </form>
+    </div>
+    <button id="leavegame" class="gamebutton">Leave the Game</button>
+    <button id="startgame" class="gamebutton">Start the Game!</button>
+  </script>
+  <script type="text/template" id="signupplayertpl">
     <div class="playername"><%= name %><tt class="cash"><%= chips %></tt></div>
     <div class="playerpiles">&nbsp;</div>
     <div class="playerstate"><%= state %></div>
@@ -45,5 +62,16 @@
       <% } %>
     </div>
   </script>
+  <script type="text/template" id="playertpl">
+    <div class="playername"><%= name %><tt class="cash"><%= chips %></tt></div>
+    <div class="playerpiles">&nbsp;</div>
+    <div class="playerstate"><%= state %></div>
+    <div class="playerhand hand">
+      <% for (var i = 0; i < cards.length; i++) { %>
+        <div class="card <%= cards[i] %>"></div>
+      <% } %>
+    </div>
+  </script>
+  <body>
   </body>
 </html>

@@ -8,7 +8,7 @@
   <script type="text/javascript" src="/jquery-3.4.1.min.js"></script>
   <script type="text/javascript" src="/maketable.js"></script>
   </head>
-  <body onLoad="onBodyLoad()">
+  <body>
     <div style="display: block; width: 600px;">RollPoker: The poker assistant to let you play poker with your friends while we
     practice Social Distancing in these isolating times. Mainly intended for use alongside
     Jitsi, Zoom, Webex, Google Meet, Facetime, Skype Video, Discord, Slack, or any other
@@ -71,7 +71,11 @@
       </tr>
       <tr>
         <th>(SNG) Blinds durations</th>
-        <td><input type="text" name="BlindDurations" value="40 40 40 20"></td>
+        <td><input type="text" name="BlindTimes" value="40 40 40 40 20"></td>
+      </tr>
+      <tr>
+        <th>Admin Password</th>
+        <td><input type="text" name="AdminPassword" value="hunter2"></td>
       </tr>
     </table>
     </form>

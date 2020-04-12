@@ -67,3 +67,5 @@ node_modules/
 # Local files to ignore
 firebase
 gofuncs/gfhost
+/gofuncs/apikeys.go
+firebase-key.json
