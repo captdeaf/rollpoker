@@ -11,6 +11,8 @@ import (
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/option"
 
+	"github.com/sendgrid/sendgrid-go"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
 type GameSettings struct {
@@ -236,6 +238,27 @@ func GetState(w http.ResponseWriter, r *http.Request) {
 	SendFullState(w, game)
 }
 
+func RegisterAccount(game *Game, gc *GameCommand) {
+	fmt.Printf("Register: %s %s\n", gc.Args["DisplayName"], gc.Args["Email"])
+
+	from := mail.NewEmail("RollPoker NoReply", "no-reply@deafcode.com")
+	subject := "RollPoker for " + gc.Args["DisplayName"]
+	to := mail.NewEmail(gc.Args["DisplayName"], gc.Args["Email"])
+
+	plainTextContent := "Registration email test"
+	htmlContent := "<strong>Registration email test</strong>"
+	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
+	client := sendgrid.NewSendClient(SENDGRID_API_KEY)
+	response, err := client.Send(message)
+	if err != nil {
+		log.Println(err)
+	} else {
+		fmt.Println(response.StatusCode)
+		fmt.Println(response.Body)
+		fmt.Println(response.Headers)
+	}
+}
+
 func Poker(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	var gc GameCommand
@@ -264,7 +287,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 
 	if player == nil {
 		if gc.Command == "register" {
-			fmt.Printf("Register: %s %s\n", gc.Args["DisplayName"], gc.Args["Email"])
+			RegisterAccount(game, &gc)
 		}
 		return
 	}
