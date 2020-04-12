@@ -12,28 +12,31 @@ var Signup = {
 
   Start: function(state) {
     $('body').html(Signup.LISTING());
-    if (POKER.GetPlayerId()) {
-      Signup.ShowLoggedIn();
-    } else {
-      Signup.ShowNotLoggedIn();
+    Signup.ShowForm();
+    Signup.ShowMembers(state);
+  },
+  ShowMembers: function(state) {
+    for (var id in state.Players) {
+      var listing = $('#' + id);
+      if (listing.length == 0) {
+        listing = $("<li>");
+        listing.attr('id', id);
+        listing.html(Signup.PLAYER(state.Players[id]));
+        $('#signuplist').append(listing);
+      }
     }
   },
-  ShowLoggedIn: function() {
-    $('.gamebutton').hide();
-    $('#leavegame').show();
-    $('#startgame').show();
-  },
-  ShowNotLoggedIn: function() {
-    $('.gamebutton').hide();
+  ShowForm: function() {
     $('#joingamediv').show();
-    $('#joingame').click(function() {
+    $('#joingameform').submit(function(evt) {
       var data = {}
       _.each($('#joingameform').serializeArray(), function(fd) {
         data[fd.name] = fd.value;
       });
       // TODO: Sanity check email and display name
-      POKER.SendCommand("register", data);
-      return false;
+      POKER.SendCommand("invite", data);
+      evt.preventDefault();
+      evt.stopPropagation();
     });
   }
 };

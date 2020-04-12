@@ -40,9 +40,9 @@
   </script>
   <script type="text/template" id="signuptpl">
     <h3>Players currently involved:</h3>
-    <ul class="signuplist">
+    <ul id="signuplist">
     </ul><br>
-    <div id="joingamediv" class="gamebutton" style="width: 400px; padding: 0.5em; border: 1px solid black;">
+    <div id="joingamediv" style="width: 400px; padding: 0.5em; border: 1px solid black;">
     <form id="joingameform">
       <input type="text" name="DisplayName" placeholder="Display Name" value=""><br>
       <input type="text" name="Email" placeholder="Email Address" value=""><br><i>We only use your email address once, to send a sign-in link to, it is never saved..</i><br>
@@ -53,13 +53,9 @@
     <button id="startgame" class="gamebutton">Start the Game!</button>
   </script>
   <script type="text/template" id="signupplayertpl">
-    <div class="playername"><%= name %><tt class="cash"><%= chips %></tt></div>
-    <div class="playerpiles">&nbsp;</div>
-    <div class="playerstate"><%= state %></div>
+    <div class="playername"><%= DisplayName %><% if (POKER.PLAYER_ID == PlayerId) { %> (You!)<% } %></div>
     <div class="playerhand hand">
-      <% for (var i = 0; i < cards.length; i++) { %>
-        <div class="card <%= cards[i] %>"></div>
-      <% } %>
+      <div class="card ha hk"></div>
     </div>
   </script>
   <script type="text/template" id="playertpl">

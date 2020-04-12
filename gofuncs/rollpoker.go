@@ -70,6 +70,7 @@ type TableState struct {
 }
 
 type Game struct {
+	Name		string
 	State		string
 	EventId		int	`json:"-"`
 	GameEvents	[]GameEvent	`json:"-"`
@@ -131,15 +132,16 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 
 	var newgr GameResponse
 
-	newgr.Name = GenerateNewName()
-
 	var newgame Game
 
+	newgame.Name = GenerateName()
 	newgame.State = NOGAME
 	newgame.Settings = settings
 	newgame.CreatedAt = 0
 	newgame.UpdatedAt = 0
 	newgame.EventId = 1
+
+	newgr.Name = newgame.Name
 
 	_, err = client.Doc("games/" + newgr.Name).Set(context.Background(), newgame)
 
@@ -178,6 +180,12 @@ func FetchGame(name string) *Game {
 	return &game
 }
 
+type StateResponse struct {
+	GameName	string
+	GameState	*Game
+	Event		*GameEvent
+}
+
 func SendFullState(w http.ResponseWriter, game *Game) {
 	// We don't actually send full state.
 	// What we do send is:
@@ -208,6 +216,8 @@ func GetState(w http.ResponseWriter, r *http.Request) {
 	// TODO: Sanity checking on GSR.
 	if gsr.PlayerId == "" {
 		fmt.Println("Player is nil, hasn't joined")
+	} else {
+		fmt.Println("Player is", gsr.PlayerId)
 	}
 
 	game := FetchGame(gsr.Name)
@@ -282,9 +292,14 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 		game.Players = map[string]Player{}
 	}
 	game.Players[player.PlayerId] = player
-	_, err = client.Doc("games/" + gc.Name).Set(context.Background(), game)
+	SaveGame(game)
 
-	return true
+	return err == nil
+}
+
+func SaveGame(game *Game) {
+	fmt.Println("Saved", game.Name)
+	client.Doc("games/" + game.Name).Set(context.Background(), game)
 }
 
 func Poker(w http.ResponseWriter, r *http.Request) {
@@ -313,16 +328,16 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		}
         }
 
-	if player == nil {
-		if gc.Command == "register" {
-			if !RegisterAccount(game, &gc) {
-				http.Error(w, "Unable to register", http.StatusBadRequest)
-			}
-		}
-		return
-	}
+	fmt.Println("Got", gc.Command)
 
-	// The only thing the player can do is register.
+	if gc.Command == "invite" {
+		if !RegisterAccount(game, &gc) {
+			http.Error(w, "Unable to register", http.StatusBadRequest)
+		}
+	}
+	return
+
+	// If PlayerId is null, the only thing the player can do is register.
 	fmt.Fprintf(w, "Welcome %s", player.DisplayName)
 }
 

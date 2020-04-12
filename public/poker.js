@@ -7,17 +7,28 @@ var POKER = {
     } else {
       return;
     }
+    var m = document.location.search.match(/\?id=(\w+)\&key=(\w+)$/);
+    if (m) {
+      POKER.PLAYER_ID = m[1];
+      POKER.PLAYER_KEY = m[2];
+      POKER.SetPlayerCookie("playerid", POKER.PLAYER_ID);
+      POKER.SetPlayerCookie("playerkey", POKER.PLAYER_KEY);
+      document.location.search = "";
+    }
+    if (!POKER.PLAYER_ID) {
+      POKER.PLAYER_ID = POKER.GetPlayerId();
+    }
 
     // Initialize all the renderers
     Signup.Setup();
     TableRenderer.Setup();
   },
-  SetPlayerId: function(pid) {
+  SetPlayerCookie: function(name, val) {
     // We set this in a cookie.
     var d = new Date();
     d.setTime(d.getTime() + (365*24*60*60*1000));
     var expires = "expires="+ d.toUTCString();
-    document.cookie =  "playerid=" + cvalue + ";" + expires + ";path=/table/" + POKER.NAME;
+    document.cookie =  name + "=" + val + ";" + expires + ";path=/table/" + POKER.NAME;
   },
   UpdateSettings: function(settings) {
     TableRenderer.UpdateSettings(settings);
@@ -48,7 +59,7 @@ var POKER = {
       Last: eventid,
       Name: POKER.NAME,
     };
-    params.Player = POKER.GetPlayerId();
+    params.PlayerId = POKER.GetPlayerId();
     console.log("Polling");
     $.ajax({
       url: '/GetState',
