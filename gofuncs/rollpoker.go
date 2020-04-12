@@ -238,25 +238,53 @@ func GetState(w http.ResponseWriter, r *http.Request) {
 	SendFullState(w, game)
 }
 
-func RegisterAccount(game *Game, gc *GameCommand) {
+func RegisterAccount(game *Game, gc *GameCommand) bool {
 	fmt.Printf("Register: %s %s\n", gc.Args["DisplayName"], gc.Args["Email"])
+
+	if gc.Args["DisplayName"] == "" || gc.Args["Email"] == "" {
+		return false
+	}
+	for _, p := range game.Players {
+		if p.DisplayName == gc.Args["DisplayName"] {
+			return false
+		}
+	}
+
+	var player Player
+
+	player.DisplayName = gc.Args["DisplayName"]
+	player.Table = -1
+	player.Seat = -1
+	player.PlayerId = GenerateName()
+	player.PlayerKey = GenerateName()
+	player.Chips = -1
+
+	player.State = "BUSTED"
+	player.Hand = ""
+	player.Bet = -1
 
 	from := mail.NewEmail("RollPoker NoReply", "no-reply@deafcode.com")
 	subject := "RollPoker for " + gc.Args["DisplayName"]
 	to := mail.NewEmail(gc.Args["DisplayName"], gc.Args["Email"])
 
-	plainTextContent := "Registration email test"
-	htmlContent := "<strong>Registration email test</strong>"
+	link := "http://localhost/table/" + gc.Name + "?id=" + player.PlayerId + "&key=" + player.PlayerKey
+
+	plainTextContent := "You have been invited to join a poker game: " + link
+	htmlContent := "<a href=\"" + link + "\">Click here to join the poker game</a>"
 	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
-	client := sendgrid.NewSendClient(SENDGRID_API_KEY)
-	response, err := client.Send(message)
+	sgclient := sendgrid.NewSendClient(SENDGRID_API_KEY)
+	_, err := sgclient.Send(message)
 	if err != nil {
-		log.Println(err)
-	} else {
-		fmt.Println(response.StatusCode)
-		fmt.Println(response.Body)
-		fmt.Println(response.Headers)
+		return false
 	}
+	fmt.Println(link)
+	if game.Players == nil {
+		game.Players = map[string]Player{}
+	}
+	game.Players[player.PlayerId] = player
+	_, err = client.Doc("games/" + gc.Name).Set(context.Background(), game)
+
+	return true
 }
 
 func Poker(w http.ResponseWriter, r *http.Request) {
@@ -287,7 +315,9 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 
 	if player == nil {
 		if gc.Command == "register" {
-			RegisterAccount(game, &gc)
+			if !RegisterAccount(game, &gc) {
+				http.Error(w, "Unable to register", http.StatusBadRequest)
+			}
 		}
 		return
 	}
