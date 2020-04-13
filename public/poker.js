@@ -48,18 +48,35 @@ var Poker = {
       return m[1];
     }
   },
-  UpdateEvents: function(evts) {
+  LAST_STATE: "NOSTATE",
+  UpdateState: function(state) {
+    if (Poker.LAST_STATE != state) {
+      Poker.LAST_STATE = state;
+      if (state.State == "NOGAME") {
+        // Listing of players currently registered, and ability to register.
+        Signup.Start(state);
+      } else if (state.State == "CASHGAME") {
+        // Tables, can join/register.
+      } else if (state.State == "SITNGO") {
+        // Tables, no joining/registering.
+      }
+    } else {
+      // Update without redrawing everything. Try to minimize?
+    }
   },
-  UpdateFullState: function(resp) {
-    console.log(resp);
-    var state = resp.GameState;
-    if (state.State == "NOGAME") {
-      // Listing of players currently registered, and ability to register.
-      Signup.Start(state);
-    } else if (state.State == "CASHGAME") {
-      // Tables, can join/register.
-    } else if (state.State == "SITNGO") {
-      // Tables, no joining/registering.
+  ProcessEvent: function(evt) {
+  },
+  Update: function(resp) {
+    Poker.UpdateState(resp.GameState);
+    if (resp.Events) {
+      for (var i = 0; i < resp.Events.length; i++) {
+        var evt = resp.Events[i];
+        if (Events[evt.Event]) {
+          Events[evt.Event](evt)
+        } else {
+          console.log("Don't know what to do with ", evt.Event);
+        }
+      }
     }
   },
   Poll: function(eventid) {
@@ -77,14 +94,14 @@ var Poker = {
       data: JSON.stringify(params),
       success: function(result) {
         console.log(result);
-        if (result == "false") {
-          setTimeout(function() {
-            Poker.Poll(eventid);
-          }, 500);
-        } else {
-          console.log("unblank");
-          Poker.UpdateFullState(result);
+        if (result != "0") {
+          Poker.Update(result);
+          eventid = result.Last;
         }
+        console.log("Adding timeout");
+        setTimeout(function() {
+          Poker.Poll(eventid);
+        }, 5000);
       }
     });
   },

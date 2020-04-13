@@ -8,6 +8,7 @@
   <script type="text/javascript" src="/jquery-3.4.1.min.js"></script>
   <script type="text/javascript" src="/tablerender.js"></script>
   <script type="text/javascript" src="/signup.js"></script>
+  <script type="text/javascript" src="/events.js"></script>
   <script type="text/javascript" src="/poker.js"></script>
   </head>
   <script type="text/template" id="tabletpl">
@@ -54,9 +55,6 @@
   </script>
   <script type="text/template" id="signupplayertpl">
     <div class="playername"><%= DisplayName %><% if (Poker.PLAYER_ID == PlayerId) { %> (You!)<% } %></div>
-    <div class="playerhand hand">
-      <div class="card ha hk"></div>
-    </div>
   </script>
   <script type="text/template" id="playertpl">
     <div class="playername"><%= name %><tt class="cash"><%= chips %></tt></div>

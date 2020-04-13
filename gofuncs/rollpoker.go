@@ -61,10 +61,11 @@ type GameEvent struct {
 	Log		string	// "Chris folded". If nil, no log.
 }
 
-func AddEvent(game *Game, event string, args interface{}, logmsg string) {
+func AddEvent(game *Game, playerid string, event string, args interface{}, logmsg string) {
 	evt := GameEvent{}
 	game.EventId += 1
 	evt.EventId = game.EventId
+	evt.PlayerId = playerid
 	evt.Log = logmsg
 	evt.Event = event
 	bytes, err := json.Marshal(args)
@@ -72,6 +73,10 @@ func AddEvent(game *Game, event string, args interface{}, logmsg string) {
 		fmt.Printf("Error with event '%s': %v", event, err)
 	} else {
 		evt.Args = string(bytes)
+	}
+	game.Events = append(game.Events, evt)
+	if len(game.Events) > 20 {
+		game.Events = game.Events[len(game.Events)-20:len(game.Events)]
 	}
 }
 
@@ -229,7 +234,7 @@ func GetState(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	if gsr.Last == game.EventId {
-		fmt.Fprintf(w, "false")
+		fmt.Fprintf(w, "0")
 		return
 	}
 
@@ -237,7 +242,10 @@ func GetState(w http.ResponseWriter, r *http.Request) {
 	resp.GameName = game.Name
 	resp.GameState = game
 	if gsr.Last >= 0 && game.EventId >= 0 {
-		resp.Events = game.Events[gsr.Last:game.EventId]
+		// We keep Events trimmed, so Events probably doesn't have 0-N, so we
+		// need to count from the actual first Events
+		start := game.Events[0].EventId
+		resp.Events = game.Events[gsr.Last-start:game.EventId-start]
 	}
 	resp.Last = game.EventId
 
@@ -355,6 +363,10 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 }
 
 func (game *Game) StartGame(player *Player, gc *GameCommand) {
-	fmt.Printf("Player %s starts game %s with command %s",
-			player.DisplayName, game.Name, gc.Command)
+	if game.State != NOGAME {
+		return
+	}
+	AddEvent(game, player.PlayerId, "Start", nil,
+		 fmt.Sprintf("%s has started the game!", player.DisplayName))
+	SaveGame(game)
 }
