@@ -27,14 +27,18 @@ var Signup = {
     }
   },
   ShowForm: function() {
-    $('#joingamediv').show();
+    $('#startgame').click(function(evt) {
+      Poker.SendCommand("StartGame", {});
+      evt.preventDefault();
+      evt.stopPropagation();
+    });
     $('#joingameform').submit(function(evt) {
       var data = {}
       _.each($('#joingameform').serializeArray(), function(fd) {
         data[fd.name] = fd.value;
       });
       // TODO: Sanity check email and display name
-      POKER.SendCommand("invite", data);
+      Poker.SendCommand("invite", data);
       evt.preventDefault();
       evt.stopPropagation();
     });

@@ -1,6 +1,7 @@
 package rollpoker
 
 import (
+	"reflect"
 	"os"
 	"fmt"
 	"context"
@@ -54,11 +55,24 @@ const (
 
 type GameEvent struct {
 	EventId		int	// 0..9
-	Table		int	// 0...
+	PlayerId	string	// MadOrangeCow
 	Event		string	// Name for description e.g: "Fold"
 	Args		string	// Parameters. "playerid"
-	JsonDiff	string	// Diffs of State, TableState, Player and GameSettings
 	Log		string	// "Chris folded". If nil, no log.
+}
+
+func AddEvent(game *Game, event string, args interface{}, logmsg string) {
+	evt := GameEvent{}
+	game.EventId += 1
+	evt.EventId = game.EventId
+	evt.Log = logmsg
+	evt.Event = event
+	bytes, err := json.Marshal(args)
+	if err != nil {
+		fmt.Printf("Error with event '%s': %v", event, err)
+	} else {
+		evt.Args = string(bytes)
+	}
 }
 
 type TableState struct {
@@ -73,7 +87,7 @@ type Game struct {
 	Name		string
 	State		string
 	EventId		int	`json:"-"`
-	GameEvents	[]GameEvent	`json:"-"`
+	Events	[]GameEvent	`json:"-"`
 	Players		map[string] Player
 	TableStates	[]TableState
 	Settings	GameSettings
@@ -90,6 +104,7 @@ const (
 type GameCommand struct {
 	Name		string
 	PlayerId	string
+	PlayerKey	string
 	Command		string
 	Args		map[string] string
 }
@@ -139,7 +154,7 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 	newgame.Settings = settings
 	newgame.CreatedAt = 0
 	newgame.UpdatedAt = 0
-	newgame.EventId = 1
+	newgame.EventId = -1
 
 	newgr.Name = newgame.Name
 
@@ -183,23 +198,8 @@ func FetchGame(name string) *Game {
 type StateResponse struct {
 	GameName	string
 	GameState	*Game
-	Event		*GameEvent
-}
-
-func SendFullState(w http.ResponseWriter, game *Game) {
-	// We don't actually send full state.
-	// What we do send is:
-	// * All Player states (with info stripped out)
-	// * All Table states
-	// * GameState (running/paused/etc)
-	// * GameSettings
-	bytes, err := json.Marshal(game)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	} else {
-		fmt.Println("Sending full state of ", game.Settings.GameName)
-		w.Write(bytes)
-	}
+	Events		[]GameEvent
+	Last		int
 }
 
 func GetState(w http.ResponseWriter, r *http.Request) {
@@ -210,7 +210,7 @@ func GetState(w http.ResponseWriter, r *http.Request) {
 		// http.Error(w, err.Error(), http.StatusBadRequest)
 		// return
 		gsr.Name = "OrangePanda"
-		gsr.Last = 0
+		gsr.Last = -1
 	}
 
 	// TODO: Sanity checking on GSR.
@@ -227,25 +227,30 @@ func GetState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Add("Content-Type", "application/json")
-	want := gsr.Last + 1
 
 	if gsr.Last == game.EventId {
 		fmt.Fprintf(w, "false")
 		return
 	}
-	// TODO: Sanity Checking
 
-	for _,evt := range game.GameEvents {
-		if evt.EventId == want {
-			// Only send this Event
-			fmt.Fprintf(w, "{}")
-			break
-		}
+	resp := StateResponse{}
+	resp.GameName = game.Name
+	resp.GameState = game
+	if gsr.Last >= 0 && game.EventId >= 0 {
+		resp.Events = game.Events[gsr.Last:game.EventId]
 	}
+	resp.Last = game.EventId
 
 	// Send entire state (stripped of other players' personal info, ofc)
 	fmt.Println(game.Settings.GameName)
-	SendFullState(w, game)
+
+	bytes, err := json.Marshal(resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	} else {
+		fmt.Println("Sending full state of ", game.Settings.GameName)
+		w.Write(bytes)
+	}
 }
 
 func RegisterAccount(game *Game, gc *GameCommand) bool {
@@ -318,15 +323,12 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie, err := r.Cookie("playerkey")
-        if err == nil {
-		for _, p := range game.Players {
-			if p.PlayerId == gc.PlayerId && p.PlayerKey == cookie.Value {
-				player = &p
-				break
-			}
+	for _, p := range game.Players {
+		if p.PlayerId == gc.PlayerId && p.PlayerKey == gc.PlayerKey {
+			player = &p
+			break
 		}
-        }
+	}
 
 	fmt.Println("Got", gc.Command)
 
@@ -334,11 +336,25 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		if !RegisterAccount(game, &gc) {
 			http.Error(w, "Unable to register", http.StatusBadRequest)
 		}
+		return
 	}
-	return
 
-	// If PlayerId is null, the only thing the player can do is register.
+	if player == nil {
+		// If PlayerId is nil, the only thing the player can do is "register" / invite.
+		http.Error(w, "You are not a player", http.StatusBadRequest)
+		return;
+	}
+
 	fmt.Fprintf(w, "Welcome %s", player.DisplayName)
+	// Call Command by name if it has one
+	method := reflect.ValueOf(game).MethodByName(gc.Command)
+
+	if method.IsValid() {
+		method.Call([]reflect.Value{reflect.ValueOf(player), reflect.ValueOf(&gc)})
+	}
 }
 
-
+func (game *Game) StartGame(player *Player, gc *GameCommand) {
+	fmt.Printf("Player %s starts game %s with command %s",
+			player.DisplayName, game.Name, gc.Command)
+}
