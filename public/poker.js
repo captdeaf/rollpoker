@@ -72,7 +72,7 @@ var Poker = {
       for (var i = 0; i < resp.Events.length; i++) {
         var evt = resp.Events[i];
         if (Events[evt.Event]) {
-          Events[evt.Event](evt)
+          Events[evt.Event](evt);
         } else {
           console.log("Don't know what to do with ", evt.Event);
         }

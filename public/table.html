@@ -4,39 +4,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <head>
     <link rel="stylesheet" type="text/css" href="/poker.css" />
-  <script type="text/javascript" src="/underscore-min.js"></script>
-  <script type="text/javascript" src="/jquery-3.4.1.min.js"></script>
-  <script type="text/javascript" src="/tablerender.js"></script>
-  <script type="text/javascript" src="/signup.js"></script>
-  <script type="text/javascript" src="/events.js"></script>
-  <script type="text/javascript" src="/poker.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/firebasejs/7.14.0/firebase-app.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/firebasejs/7.14.0/firebase-auth.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/firebasejs/7.14.0/firebase-firestore.js"></script>
+    <script type="text/javascript">
+      // Your web app's Firebase configuration
+      var firebaseConfig = {
+        apiKey: "AIzaSyAsTsJ7UjBQu8CMADJP-JFysn6ON8Hm77M",
+        authDomain: "rollpoker.firebaseapp.com",
+        databaseURL: "https://rollpoker.firebaseio.com",
+        projectId: "rollpoker",
+        storageBucket: "rollpoker.appspot.com",
+        messagingSenderId: "413322307823",
+        appId: "1:413322307823:web:2d12f3485f45d55b12d31a"
+      };
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+    </script>
+    <script type="text/javascript" src="/underscore-min.js"></script>
+    <script type="text/javascript" src="/jquery-3.4.1.min.js"></script>
+    <script type="text/javascript" src="/tablerender.js"></script>
+    <script type="text/javascript" src="/signup.js"></script>
+    <script type="text/javascript" src="/events.js"></script>
+    <script type="text/javascript" src="/poker.js"></script>
   </head>
   <script type="text/template" id="tabletpl">
     <div class="pokertable">
       <!-- Top row -->
-      <div class="player1 playerinfo" style="top: 5%; left: 25%;"></div>
-        <div class="player1bet playerbet" style="top: 26%; left: 32%;"></div>
-      <div class="player2 playerinfo" style="top: 5%; left: 50%;"></div>
-        <div class="player2bet playerbet" style="top: 26%; left: 50%;"></div>
-      <div class="player3 playerinfo" style="top: 5%; left: 75%;"></div>
-        <div class="player3bet playerbet" style="top: 26%; left: 68%;"></div>
+      <div class="seat1 playerinfo" style="top: 5%; left: 25%;"></div>
+        <div class="seat1bet playerbet" style="top: 26%; left: 32%;"></div>
+      <div class="seat2 playerinfo" style="top: 5%; left: 50%;"></div>
+        <div class="seat2bet playerbet" style="top: 26%; left: 50%;"></div>
+      <div class="seat3 playerinfo" style="top: 5%; left: 75%;"></div>
+        <div class="seat3bet playerbet" style="top: 26%; left: 68%;"></div>
       <!-- Right side -->
-      <div class="player4 playerinfo" style="top: 28%; left: 85%;"></div>
-        <div class="player4bet playerbet" style="top: 42%; left: 70%;"></div>
-      <div class="player5 playerinfo" style="top: 52%; left: 85%;"></div>
-        <div class="player5bet playerbet" style="top: 52%; left: 70%;"></div>
+      <div class="seat4 playerinfo" style="top: 28%; left: 85%;"></div>
+        <div class="seat4bet playerbet" style="top: 42%; left: 70%;"></div>
+      <div class="seat5 playerinfo" style="top: 52%; left: 85%;"></div>
+        <div class="seat5bet playerbet" style="top: 52%; left: 70%;"></div>
       <!-- Bottom row -->
-      <div class="player6 playerinfo" style="top: 75%; left: 75%;"></div>
-        <div class="player6bet playerbet" style="top: 68%; left: 68%;"></div>
-      <div class="player7 playerinfo" style="top: 75%; left: 50%;"></div>
-        <div class="player7bet playerbet" style="top: 68%; left: 50%;"></div>
-      <div class="player8 playerinfo" style="top: 75%; left: 25%;"></div>
-        <div class="player8bet playerbet" style="top: 68%; left: 32%;"></div>
+      <div class="seat6 playerinfo" style="top: 75%; left: 75%;"></div>
+        <div class="seat6bet playerbet" style="top: 68%; left: 68%;"></div>
+      <div class="seat7 playerinfo" style="top: 75%; left: 50%;"></div>
+        <div class="seat7bet playerbet" style="top: 68%; left: 50%;"></div>
+      <div class="seat8 playerinfo" style="top: 75%; left: 25%;"></div>
+        <div class="seat8bet playerbet" style="top: 68%; left: 32%;"></div>
       <!-- Left side -->
-      <div class="player9 playerinfo" style="top: 52%; left: 15%;"></div>
-        <div class="player9bet playerbet" style="top: 52%; left: 30%; text-align: left;"></div>
-      <div class="player10 playerinfo" style="top: 28%; left: 15%;"></div>
-        <div class="player10bet playerbet" style="top: 42%; left: 30%; text-align: left;"></div>
+      <div class="seat9 playerinfo" style="top: 52%; left: 15%;"></div>
+        <div class="seat9bet playerbet" style="top: 52%; left: 30%; text-align: left;"></div>
+      <div class="seat0 playerinfo" style="top: 28%; left: 15%;"></div>
+        <div class="seat0bet playerbet" style="top: 42%; left: 30%; text-align: left;"></div>
     </div>
   </script>
   <script type="text/template" id="signuptpl">
