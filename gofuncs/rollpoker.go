@@ -188,19 +188,47 @@ type GetStateRequest struct {
 
 func FetchGame(name string) *Game {
 	var game Game
-	gamesRef := client.Doc("games/" + name)
+	privRef := client.Doc("private/" + name)
 	ctx := context.Background()
-	gd, err := gamesRef.Get(ctx)
+	priv, err := privRef.Get(ctx)
 	if err != nil {
 		log.Printf("Can't get snapshot: %v", err)
 		return nil
 	}
-	err = gd.DataTo(&game)
+	err = priv.DataTo(&game.Private)
 	if err != nil {
-		log.Printf("No datato avail: %v", err)
+		log.Printf("No priv.datato avail: %v", err)
 		return nil
 	}
+
+	pubRef := client.Doc("public/" + name)
+	pub, err := pubRef.Get(ctx)
+	if err != nil {
+		log.Printf("Can't get snapshot: %v", err)
+		return nil
+	}
+	err = pub.DataTo(&game.Public)
+	if err != nil {
+		log.Printf("No pub.datato avail: %v", err)
+		return nil
+	}
+	game.Name = name;
 	return &game
+}
+
+func SaveGame(game *Game) {
+	// We save to two locations. Private to private/<name>, public to public/<name>
+	_, err := client.Doc("private/" + game.Name).Set(context.Background(), game.Private)
+	if err != nil {
+		fmt.Printf("Error saving private: %v", err)
+		return
+	}
+	_, err = client.Doc("public/" + game.Name).Set(context.Background(), game.Public)
+	if err != nil {
+		fmt.Printf("Error saving public: %v", err)
+		return
+	}
+	fmt.Println("Saved", game.Name)
 }
 
 type StateResponse struct {
@@ -239,9 +267,11 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 	htmlContent := "<a href=\"" + link + "\">Click here to join the poker game</a>"
 	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
 	sgclient := sendgrid.NewSendClient(SENDGRID_API_KEY)
-	_, err := sgclient.Send(message)
-	if err != nil {
-		return false
+	if false {
+		_, err := sgclient.Send(message)
+		if err != nil {
+			return false
+		}
 	}
 	fmt.Println(link)
 	if game.Public.Players == nil {
@@ -250,15 +280,7 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 	game.Public.Players[player.PlayerId] = player
 	SaveGame(game)
 
-	return err == nil
-}
-
-func SaveGame(game *Game) {
-	_, err := client.Doc("games/" + game.Name).Set(context.Background(), game)
-	if err != nil {
-		fmt.Printf("Error: %v", err)
-	}
-	fmt.Println("Saved", game.Name)
+	return true
 }
 
 func Poker(w http.ResponseWriter, r *http.Request) {

@@ -1,4 +1,19 @@
+
 var Poker = {
+  SetupFirebase: function() {
+    // Your web app's Firebase configuration
+    var firebaseConfig = {
+      apiKey: "AIzaSyAsTsJ7UjBQu8CMADJP-JFysn6ON8Hm77M",
+      authDomain: "rollpoker.firebaseapp.com",
+      databaseURL: "https://rollpoker.firebaseio.com",
+      projectId: "rollpoker",
+      storageBucket: "rollpoker.appspot.com",
+      messagingSenderId: "413322307823",
+      appId: "1:413322307823:web:2d12f3485f45d55b12d31a"
+    };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  },
   Setup: function() {
     // First make sure we have our game name.
     var m = document.location.pathname.match(/table\/(\w+)$/);
@@ -49,15 +64,17 @@ var Poker = {
     }
   },
   LAST_STATE: "NOSTATE",
-  UpdateState: function(state) {
-    if (Poker.LAST_STATE != state) {
-      Poker.LAST_STATE = state;
-      if (state.State == "NOGAME") {
+  LAST_DATA: {},
+  UpdateState: function(doc) {
+    if (Poker.LAST_STATE != doc.State) {
+      Poker.LAST_STATE = doc.State;
+      Poker.LAST_DATA = doc;
+      if (doc.State == "NOGAME") {
         // Listing of players currently registered, and ability to register.
-        Signup.Start(state);
-      } else if (state.State == "CASHGAME") {
+        Signup.Start(doc);
+      } else if (doc.State == "CASHGAME") {
         // Tables, can join/register.
-      } else if (state.State == "SITNGO") {
+      } else if (doc.State == "SITNGO") {
         // Tables, no joining/registering.
       }
     } else {
@@ -67,7 +84,7 @@ var Poker = {
   ProcessEvent: function(evt) {
   },
   Update: function(resp) {
-    Poker.UpdateState(resp.GameState);
+    Poker.UpdateState(resp);
     if (resp.Events) {
       for (var i = 0; i < resp.Events.length; i++) {
         var evt = resp.Events[i];
@@ -78,32 +95,6 @@ var Poker = {
         }
       }
     }
-  },
-  Poll: function(eventid) {
-    var params = {
-      Last: eventid,
-      Name: Poker.NAME,
-    };
-    params.PlayerId = Poker.PLAYER_ID;
-    params.PlayerKey = Poker.PLAYER_KEY;
-    console.log("Polling");
-    $.ajax({
-      url: '/GetState',
-      type: 'POST',
-      dataType: 'json',
-      data: JSON.stringify(params),
-      success: function(result) {
-        console.log(result);
-        if (result != "0") {
-          Poker.Update(result);
-          eventid = result.Last;
-        }
-        console.log("Adding timeout");
-        setTimeout(function() {
-          Poker.Poll(eventid);
-        }, 5000);
-      }
-    });
   },
   SendCommand: function(command, args) {
     var params = {
@@ -123,9 +114,20 @@ var Poker = {
       }
     });
   },
+  Start: function() {
+    // Start monitoring the state document.
+    if (Poker.NAME && Poker.NAME != "") {
+      var db = firebase.firestore();
+      Poker.DOCUMENT = db.doc("/public/" + Poker.NAME);
+      Poker.DOCUMENT.onSnapshot(function(doc) {
+        Poker.Update(doc.data());
+      });
+    }
+  },
 };
 
 $(document).ready(function() {
+  Poker.SetupFirebase();
   Poker.Setup();
-  Poker.Poll(-1);
+  Poker.Start();
 });
