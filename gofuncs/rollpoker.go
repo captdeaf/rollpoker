@@ -19,12 +19,11 @@ import (
 )
 
 type GameSettings struct {
-	Name	string	// TexasHoldem, OmahaHoldem, etc.
 	GameType	string	// Cash, SitNGo
 	BetLimit	string	// NoLimit, PotLimit
 	StartingChips	int	// 1500
 	ChipValues	string	// White Red Blue Green Black Yellow: "25 100 500 1000..."
-	BlindStructure	[][]int	// 25 50,25 75,50 100,75 150,...
+	BlindStructure	[]string	// 25 50,25 75,50 100,75 150,...
 	BlindTimes	[]int	// 40 40 40 20, for first 3 to be 40 minutes, then 20 mins after that.
 }
 
@@ -51,9 +50,9 @@ type TableState struct {
 	Dealer		string		// seat0...seat9
 }
 
-type PublicGameState struct {
-	Name		string
-	GameState	GameSettings
+type PublicGameInfo struct {
+	State		string	// "NOGAME", "CASH", "SITNGO", etc.
+	GameSettings	GameSettings
 	Tables		map[string]TableState
 	Players		map[string]Player
 }
@@ -69,7 +68,7 @@ type GameEvent struct {
 type Game struct {
 	Name	string
 	Private	PrivateGameInfo
-	Public	PublicGameState
+	Public	PublicGameInfo
 }
 
 const (
@@ -86,6 +85,7 @@ const (
 func AddEvent(game *Game, playerid string, event string, args interface{}, logmsg string) {
 }
 
+// values for Public.State
 const (
 	NOGAME = "NOGAME"	// Default
 	CASHGAME = "CASHGAME"	// Cash in, cash out. Buy in or play
@@ -136,10 +136,10 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("args: %v", args)
+
 	var newgame Game
 	var settings GameSettings
-
-	settings.Name = GenerateName()
 
 	settings.GameType = args["GameType"]
 	settings.BetLimit = args["BetLimit"]
@@ -148,15 +148,10 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 	settings.ChipValues = args["ChipValues"] // We don't bother with this just yet, we pass
 						 // it straight to javascript.
 	allblinds := strings.Split(args["BlindStructure"], ",")
-	settings.BlindStructure	= make([][]int, len(allblinds))	// 25 50,25 75,50 100,75 150,...
+	settings.BlindStructure	= make([]string, len(allblinds))	// 25 50,25 75,50 100,75 150,...
 
 	for i, val := range allblinds {
-		allbs := strings.Fields(val)
-		settings.BlindStructure[i] = make([]int, len(allbs))
-		for j, jv := range(allbs) {
-			t64, _ := strconv.ParseInt(jv, 10, 32)
-			settings.BlindStructure[i][j] = int(t64)
-		}
+		settings.BlindStructure[i] = val
 	}
 
 	alltimes := strings.Fields(args["BlindTimes"])
@@ -166,25 +161,19 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 		settings.BlindTimes[i] = int(t64)
 	}
 
-	newgame.Name = GenerateName()
+	newgame.Name = "OrangePanda" // GenerateName()
 	newgame.Private.PlayerKeys = map[string]string{}
 	newgame.Private.TableDecks =	map[string][]string{}
 	newgame.Private.AdminPassword = args["AdminPassword"]
+	newgame.Private.OrigState = settings
 
-	newgame.Public.Name = newgame.Name
 	newgame.Public.Tables = map[string]TableState{}
+	newgame.Public.State = NOGAME
+
+	SaveGame(&newgame)
 
 	var newgr GameResponse
 	newgr.Name = newgame.Name
-
-	_, err = client.Doc("games/" + newgr.Name).Set(context.Background(), newgame)
-
-	if err != nil {
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
 
 	bytes, err := json.Marshal(newgr)
 	w.Write(bytes)
@@ -265,8 +254,11 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 }
 
 func SaveGame(game *Game) {
+	_, err := client.Doc("games/" + game.Name).Set(context.Background(), game)
+	if err != nil {
+		fmt.Printf("Error: %v", err)
+	}
 	fmt.Println("Saved", game.Name)
-	client.Doc("games/" + game.Name).Set(context.Background(), game)
 }
 
 func Poker(w http.ResponseWriter, r *http.Request) {
