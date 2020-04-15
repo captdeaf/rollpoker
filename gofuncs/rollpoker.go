@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"context"
 	"log"
+	"strconv"
+	"strings"
 	"net/http"
 	"encoding/json"
 
@@ -17,29 +19,57 @@ import (
 )
 
 type GameSettings struct {
-	GameName	string // TexasHoldem, OmahaHoldem, etc.
-	GameType	string // Cash, SitNGo
-	BetLimit	string // NoLimit, PotLimit
-	StartingChips	string // 1500. (Yes, string in case of other args)
-	StartBlinds	string // "25 50"
-	ChipValues	string // White Red Blue Green Black Yellow: "25 100 500 1000..."
-	BlindStructure	string // 25 50,25 75,50 100,75 150,...
-	BlindTimes	string // 40 40 40 20, for first 3 to be 40 minutes, then 20 mins after that.
-	AdminPassword	string `json:"-"` // "hunter2"
+	Name	string	// TexasHoldem, OmahaHoldem, etc.
+	GameType	string	// Cash, SitNGo
+	BetLimit	string	// NoLimit, PotLimit
+	StartingChips	int	// 1500
+	ChipValues	string	// White Red Blue Green Black Yellow: "25 100 500 1000..."
+	BlindStructure	[][]int	// 25 50,25 75,50 100,75 150,...
+	BlindTimes	[]int	// 40 40 40 20, for first 3 to be 40 minutes, then 20 mins after that.
+}
+
+type PrivateGameInfo struct {
+	PlayerKeys	map[string]string	// KillerOrangeHouse:FooBarBaz
+	TableDecks	map[string][]string	// "table0": ["ha", "s3", ...], ...
+	AdminPassword	string			// "hunter2"
+	OrigState	GameSettings		// Original game state for restart/new game/etc
 }
 
 type Player struct {
-	PlayerId	string	// "p3253c321"
-	Table		int	// 0...?
-	Seat		int	// 0...9
-	DisplayName	string	// What to show everyone else
-	PlayerKey	string	`json:"-"` // To reconnect / view from multiple devices
-	Chips		int	// How many chips they have
+	PlayerId	string		// MadPinkWhale
+	DisplayName	string		// "Bob D"
+	DisplayState	string		// "Active" "Zzzzz" "Not connected"
+	Rank		int		// Assigned on Bust out or Game won
+	Chips		int		// 1500
+	Bet		int		// Current amount bet // inside the circle
+	State		string		// "Waiting" "Folded" etc
+}
 
-	// Current hand info:
-	State		string
-	Hand		string	`json:"-"` // To reconnect / view from multiple devices
-	Bet		int	// Current amount bet // not in the pot.
+type TableState struct {
+	Seats		map[string]string	// seat0...seat9 to PlayerId
+	Pot		int		// 200 ... total in pot, but not in bets
+	Dealer		string		// seat0...seat9
+}
+
+type PublicGameState struct {
+	Name		string
+	GameState	GameSettings
+	Tables		map[string]TableState
+	Players		map[string]Player
+}
+
+type GameEvent struct {
+	EventId		int	// 0..9
+	PlayerId	string	// MadOrangeCow
+	Event		string	// Name for description e.g: "Fold"
+	Args		string	// Parameters. "playerid"
+	Log		string	// "Chris folded". If nil, no log.
+}
+
+type Game struct {
+	Name	string
+	Private	PrivateGameInfo
+	Public	PublicGameState
 }
 
 const (
@@ -53,51 +83,7 @@ const (
 	ALLIN = "ALLIN"		// Has no more chips left.
 )
 
-type GameEvent struct {
-	EventId		int	// 0..9
-	PlayerId	string	// MadOrangeCow
-	Event		string	// Name for description e.g: "Fold"
-	Args		string	// Parameters. "playerid"
-	Log		string	// "Chris folded". If nil, no log.
-}
-
 func AddEvent(game *Game, playerid string, event string, args interface{}, logmsg string) {
-	evt := GameEvent{}
-	game.EventId += 1
-	evt.EventId = game.EventId
-	evt.PlayerId = playerid
-	evt.Log = logmsg
-	evt.Event = event
-	bytes, err := json.Marshal(args)
-	if err != nil {
-		fmt.Printf("Error with event '%s': %v", event, err)
-	} else {
-		evt.Args = string(bytes)
-	}
-	game.Events = append(game.Events, evt)
-	if len(game.Events) > 20 {
-		game.Events = game.Events[len(game.Events)-20:len(game.Events)]
-	}
-}
-
-type TableState struct {
-	Blinds		[]int
-	BlindTime	int
-	Pot		int
-	Dealer		int
-	Deck		[]string `json:"-"`
-}
-
-type Game struct {
-	Name		string
-	State		string
-	EventId		int	`json:"-"`
-	Events	[]GameEvent	`json:"-"`
-	Players		map[string] Player
-	TableStates	[]TableState
-	Settings	GameSettings
-	CreatedAt	int	`json:"-"`
-	UpdatedAt	int	`json:"-"`
 }
 
 const (
@@ -142,25 +128,53 @@ func GenerateNewName() string {
 }
 
 func MakeTable(w http.ResponseWriter, r *http.Request) {
-	var settings GameSettings
+	var args map[string]string
 
-	err := json.NewDecoder(r.Body).Decode(&settings)
+	err := json.NewDecoder(r.Body).Decode(&args)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var newgr GameResponse
-
 	var newgame Game
+	var settings GameSettings
+
+	settings.Name = GenerateName()
+
+	settings.GameType = args["GameType"]
+	settings.BetLimit = args["BetLimit"]
+	i64, _ := strconv.ParseInt(args["StartingChips"], 10, 32)
+	settings.StartingChips = int(i64)
+	settings.ChipValues = args["ChipValues"] // We don't bother with this just yet, we pass
+						 // it straight to javascript.
+	allblinds := strings.Split(args["BlindStructure"], ",")
+	settings.BlindStructure	= make([][]int, len(allblinds))	// 25 50,25 75,50 100,75 150,...
+
+	for i, val := range allblinds {
+		allbs := strings.Fields(val)
+		settings.BlindStructure[i] = make([]int, len(allbs))
+		for j, jv := range(allbs) {
+			t64, _ := strconv.ParseInt(jv, 10, 32)
+			settings.BlindStructure[i][j] = int(t64)
+		}
+	}
+
+	alltimes := strings.Fields(args["BlindTimes"])
+	settings.BlindTimes = make([]int, len(alltimes))
+	for i, val := range alltimes {
+		t64, _ := strconv.ParseInt(val, 10, 32)
+		settings.BlindTimes[i] = int(t64)
+	}
 
 	newgame.Name = GenerateName()
-	newgame.State = NOGAME
-	newgame.Settings = settings
-	newgame.CreatedAt = 0
-	newgame.UpdatedAt = 0
-	newgame.EventId = -1
+	newgame.Private.PlayerKeys = map[string]string{}
+	newgame.Private.TableDecks =	map[string][]string{}
+	newgame.Private.AdminPassword = args["AdminPassword"]
 
+	newgame.Public.Name = newgame.Name
+	newgame.Public.Tables = map[string]TableState{}
+
+	var newgr GameResponse
 	newgr.Name = newgame.Name
 
 	_, err = client.Doc("games/" + newgr.Name).Set(context.Background(), newgame)
@@ -201,64 +215,10 @@ func FetchGame(name string) *Game {
 }
 
 type StateResponse struct {
-	GameName	string
+	Name	string
 	GameState	*Game
 	Events		[]GameEvent
 	Last		int
-}
-
-func GetState(w http.ResponseWriter, r *http.Request) {
-	var gsr GetStateRequest
-	err := json.NewDecoder(r.Body).Decode(&gsr)
-
-	if err != nil {
-		// http.Error(w, err.Error(), http.StatusBadRequest)
-		// return
-		gsr.Name = "OrangePanda"
-		gsr.Last = -1
-	}
-
-	// TODO: Sanity checking on GSR.
-	if gsr.PlayerId == "" {
-		fmt.Println("Player is nil, hasn't joined")
-	} else {
-		fmt.Println("Player is", gsr.PlayerId)
-	}
-
-	game := FetchGame(gsr.Name)
-	if game == nil {
-		http.Error(w, "Unknown Game", http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-
-	if gsr.Last == game.EventId {
-		fmt.Fprintf(w, "0")
-		return
-	}
-
-	resp := StateResponse{}
-	resp.GameName = game.Name
-	resp.GameState = game
-	if gsr.Last >= 0 && game.EventId >= 0 {
-		// We keep Events trimmed, so Events probably doesn't have 0-N, so we
-		// need to count from the actual first Events
-		start := game.Events[0].EventId
-		resp.Events = game.Events[gsr.Last-start:game.EventId-start]
-	}
-	resp.Last = game.EventId
-
-	// Send entire state (stripped of other players' personal info, ofc)
-	fmt.Println(game.Settings.GameName)
-
-	bytes, err := json.Marshal(resp)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	} else {
-		fmt.Println("Sending full state of ", game.Settings.GameName)
-		w.Write(bytes)
-	}
 }
 
 func RegisterAccount(game *Game, gc *GameCommand) bool {
@@ -267,7 +227,7 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 	if gc.Args["DisplayName"] == "" || gc.Args["Email"] == "" {
 		return false
 	}
-	for _, p := range game.Players {
+	for _, p := range game.Public.Players {
 		if p.DisplayName == gc.Args["DisplayName"] {
 			return false
 		}
@@ -276,21 +236,15 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 	var player Player
 
 	player.DisplayName = gc.Args["DisplayName"]
-	player.Table = -1
-	player.Seat = -1
 	player.PlayerId = GenerateName()
-	player.PlayerKey = GenerateName()
-	player.Chips = -1
-
-	player.State = "BUSTED"
-	player.Hand = ""
-	player.Bet = -1
+	playerKey := GenerateName()
+	game.Private.PlayerKeys[player.PlayerId] = playerKey
 
 	from := mail.NewEmail("RollPoker NoReply", "no-reply@deafcode.com")
 	subject := "RollPoker for " + gc.Args["DisplayName"]
 	to := mail.NewEmail(gc.Args["DisplayName"], gc.Args["Email"])
 
-	link := "http://localhost/table/" + gc.Name + "?id=" + player.PlayerId + "&key=" + player.PlayerKey
+	link := "http://localhost/table/" + gc.Name + "?id=" + player.PlayerId + "&key=" + playerKey
 
 	plainTextContent := "You have been invited to join a poker game: " + link
 	htmlContent := "<a href=\"" + link + "\">Click here to join the poker game</a>"
@@ -301,10 +255,10 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 		return false
 	}
 	fmt.Println(link)
-	if game.Players == nil {
-		game.Players = map[string]Player{}
+	if game.Public.Players == nil {
+		game.Public.Players = map[string]Player{}
 	}
-	game.Players[player.PlayerId] = player
+	game.Public.Players[player.PlayerId] = player
 	SaveGame(game)
 
 	return err == nil
@@ -331,11 +285,10 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, p := range game.Players {
-		if p.PlayerId == gc.PlayerId && p.PlayerKey == gc.PlayerKey {
-			player = &p
-			break
-		}
+	pkey, has := game.Private.PlayerKeys[gc.PlayerId]
+	if has && pkey == gc.PlayerKey {
+		playerp := game.Public.Players[gc.PlayerId]
+		player = &playerp
 	}
 
 	fmt.Println("Got", gc.Command)
@@ -350,23 +303,14 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 	if player == nil {
 		// If PlayerId is nil, the only thing the player can do is "register" / invite.
 		http.Error(w, "You are not a player", http.StatusBadRequest)
-		return;
+		return
 	}
 
-	fmt.Fprintf(w, "Welcome %s", player.DisplayName)
 	// Call Command by name if it has one
 	method := reflect.ValueOf(game).MethodByName(gc.Command)
 
 	if method.IsValid() {
-		method.Call([]reflect.Value{reflect.ValueOf(player), reflect.ValueOf(&gc)})
+		rval := method.Call([]reflect.Value{reflect.ValueOf(player), reflect.ValueOf(&gc)})
+		fmt.Fprintf(w, "%v", rval[0].Bool())
 	}
-}
-
-func (game *Game) StartGame(player *Player, gc *GameCommand) {
-	if game.State != NOGAME {
-		return
-	}
-	AddEvent(game, player.PlayerId, "Start", nil,
-		 fmt.Sprintf("%s has started the game!", player.DisplayName))
-	SaveGame(game)
 }

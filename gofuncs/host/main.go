@@ -25,7 +25,6 @@ import (
 
 func main() {
 	http.HandleFunc("/MakeTable", rollpoker.MakeTable)
-	http.HandleFunc("/GetState", rollpoker.GetState)
 	http.HandleFunc("/Poker", rollpoker.Poker)
 
 	port := os.Getenv("PORT")
