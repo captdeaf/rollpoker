@@ -1,6 +1,7 @@
 package rollpoker
 
 import (
+	"time"
 	"math/rand"
 	"strings"
 	"strconv"
@@ -18,12 +19,15 @@ func (game *Game) StartGame(player *Player, gc *GameCommand) bool {
 	for _, player := range game.Public.Players {
 		allPlayers = append(allPlayers, player.PlayerId)
 		player.Chips = settings.StartingChips
+		player.Bet = 0
+		player.Rank = 0
+		player.State = ""
 	}
 	if len(allPlayers) < 2 {
 		return false
 	}
 	if len(allPlayers) > 10 {
-		// TODO: Multiple table IDs.
+		// TODO: Multiple tables
 		return false
 	}
 	// 2) Shuffle the players and assign them seats.
@@ -38,7 +42,7 @@ func (game *Game) StartGame(player *Player, gc *GameCommand) bool {
 	})
 
 	// 3) Populate TableState from GameSettings and choose Dealer at random.
-	game.Public.Tables = map[string]TableState{}
+	game.Public.Tables = make(map[string]*TableState)
 	table := TableState{}
 	table.Seats = map[string]string{};
 	for seatnum, pid := range allPlayers {
@@ -46,7 +50,7 @@ func (game *Game) StartGame(player *Player, gc *GameCommand) bool {
 	}
 	// First player is dealer, because player position is random, anyway.
 	table.Dealer = allPlayers[0]
-	game.Public.Tables["table0"] = table
+	game.Public.Tables["table0"] = &table
 
 	game.Public.GameSettings = game.Private.OrigState
 
@@ -68,5 +72,13 @@ func (game *Game) StartGame(player *Player, gc *GameCommand) bool {
 
 	SaveGame(game)
 
+	go WaitAndDeal(game)
+
 	return true
+}
+
+func WaitAndDeal(game *Game) {
+	time.Sleep(5 * time.Second)
+
+	// find Dealer, set up rotation, and deal.
 }

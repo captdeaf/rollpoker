@@ -42,6 +42,7 @@ type Player struct {
 	Chips		int		// 1500
 	Bet		int		// Current amount bet // inside the circle
 	State		string		// "Waiting" "Folded" etc
+	Hand		[]string	// "ha sa"
 }
 
 type TableState struct {
@@ -53,8 +54,8 @@ type TableState struct {
 type PublicGameInfo struct {
 	State		string	// "NOGAME", "CASH", "SITNGO", etc.
 	GameSettings	GameSettings
-	Tables		map[string]TableState
-	Players		map[string]Player
+	Tables		map[string]*TableState
+	Players		map[string]*Player
 	CurrentBlinds	[]int
 	BlindTime	int
 	PausedAt	int // Nonzero if paused
@@ -164,12 +165,12 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newgame.Name = "OrangePanda" // GenerateName()
-	newgame.Private.PlayerKeys = map[string]string{}
-	newgame.Private.TableDecks =	map[string][]string{}
+	newgame.Private.PlayerKeys = make(map[string]string)
+	newgame.Private.TableDecks = make(map[string][]string)
 	newgame.Private.AdminPassword = args["AdminPassword"]
 	newgame.Private.OrigState = settings
 
-	newgame.Public.Tables = map[string]TableState{}
+	newgame.Public.Tables = make(map[string]*TableState)
 	newgame.Public.State = NOGAME
 
 	SaveGame(&newgame)
@@ -277,9 +278,9 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 	}
 	fmt.Println(link)
 	if game.Public.Players == nil {
-		game.Public.Players = map[string]Player{}
+		game.Public.Players = make(map[string]*Player)
 	}
-	game.Public.Players[player.PlayerId] = player
+	game.Public.Players[player.PlayerId] = &player
 	SaveGame(game)
 
 	return true
@@ -303,8 +304,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 
 	pkey, has := game.Private.PlayerKeys[gc.PlayerId]
 	if has && pkey == gc.PlayerKey {
-		playerp := game.Public.Players[gc.PlayerId]
-		player = &playerp
+		player = game.Public.Players[gc.PlayerId]
 	}
 
 	fmt.Println("Got", gc.Command)
