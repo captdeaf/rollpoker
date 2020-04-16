@@ -25,14 +25,14 @@
         <div class="playerhand hand">
         </div>
       </div>
+      <% if (player.Bet > 0) { %>
+        <div class="<%= seat %>bet playerbet"><%= TableRenderer.ChipStack(player.Bet) %></div>
+      <% } %>
     <% } %>
     </div>
   </script>
   <script type="text/template" id="tableview">
     <div id="tables"></div>
-  </script>
-  <script type="text/template" id="bet">
-    <div class="playerbet"></div>
   </script>
   <script type="text/template" id="signupview">
     <h3>Players currently involved:</h3>
