@@ -1,8 +1,8 @@
 // Initialize sprites/etc:
 var Signup = {
   Templates: {
-    LISTING: "#signuptpl",
-    PLAYER: "#signupplayertpl",
+    VIEW: "#signupview",
+    LISTING: "#signuplist",
   },
   Setup: function() {
     for (var key in this.Templates) {
@@ -11,20 +11,14 @@ var Signup = {
   },
 
   Start: function(state) {
-    $('body').html(Signup.LISTING());
+    $('body').html(Signup.VIEW());
     Signup.ShowForm();
+  },
+  Update: function(state) {
     Signup.ShowMembers(state);
   },
   ShowMembers: function(state) {
-    for (var id in state.Players) {
-      var listing = $('#' + id);
-      if (listing.length == 0) {
-        listing = $("<li>");
-        listing.attr('id', id);
-        listing.html(Signup.PLAYER(state.Players[id]));
-        $('#signuplist').append(listing);
-      }
-    }
+    $('#signups').html(Signup.LISTING(state));
   },
   ShowForm: function() {
     $('#startgame').click(function(evt) {

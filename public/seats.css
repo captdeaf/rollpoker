@@ -1,0 +1,25 @@
+/* Top row */
+.seat1 {top: 5%; left: 25%;}
+.seat2 {top: 5%; left: 50%;}
+.seat3 {top: 5%; left: 75%;}
+/* Right side */
+.seat4 {top: 28%; left: 85%;}
+.seat5 {top: 52%; left: 85%;}
+/* Bottom row */
+.seat6 {top: 75%; left: 75%;}
+.seat7 {top: 75%; left: 50%;}
+.seat8 {top: 75%; left: 25%;}
+/* Left side */
+.seat9 {top: 52%; left: 15%;}
+
+.seat0bet {top: 28%; left: 15%;}
+.seat1bet {top: 26%; left: 32%;}
+.seat2bet {top: 26%; left: 50%;}
+.seat3bet {top: 26%; left: 68%;}
+.seat4bet {top: 42%; left: 70%;}
+.seat5bet {top: 52%; left: 70%;}
+.seat6bet {top: 68%; left: 68%;}
+.seat7bet {top: 68%; left: 50%;}
+.seat8bet {top: 68%; left: 32%;}
+.seat9bet {top: 52%; left: 30%; text-align: left;}
+.seat0bet {top: 42%; left: 30%; text-align: left;}

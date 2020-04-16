@@ -66,20 +66,21 @@ var Poker = {
   LAST_STATE: "NOSTATE",
   LAST_DATA: {},
   UpdateState: function(doc) {
+    var isNew = false;
     if (Poker.LAST_STATE != doc.State) {
+      isNew = true;
       Poker.LAST_STATE = doc.State;
-      Poker.LAST_DATA = doc;
-      if (doc.State == "NOGAME") {
-        // Listing of players currently registered, and ability to register.
-        Signup.Start(doc);
-      } else if (doc.State == "CASHGAME") {
-        // Tables, can join/register.
-      } else if (doc.State == "SITNGO") {
-        // Tables, no joining/registering.
-      }
-    } else {
-      // Update without redrawing everything. Try to minimize?
     }
+    Poker.LAST_DATA = doc;
+    var handler = TableRenderer;
+    if (doc.State == "NOGAME") {
+      // Listing of players currently registered, and ability to register.
+      handler = Signup;
+    }
+    if (isNew) {
+      handler.Start();
+    }
+    handler.Update(doc);
   },
   ProcessEvent: function(evt) {
   },
@@ -114,7 +115,7 @@ var Poker = {
       }
     });
   },
-  Start: function() {
+  Monitor: function() {
     // Start monitoring the state document.
     if (Poker.NAME && Poker.NAME != "") {
       var db = firebase.firestore();
@@ -129,5 +130,5 @@ var Poker = {
 $(document).ready(function() {
   Poker.SetupFirebase();
   Poker.Setup();
-  Poker.Start();
+  Poker.Monitor();
 });

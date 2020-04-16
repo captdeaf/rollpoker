@@ -4,6 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <head>
     <link rel="stylesheet" type="text/css" href="/poker.css" />
+    <link rel="stylesheet" type="text/css" href="/seats.css" />
     <script type="text/javascript" src="https://www.gstatic.com/firebasejs/7.14.0/firebase-app.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/firebasejs/7.14.0/firebase-auth.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/firebasejs/7.14.0/firebase-firestore.js"></script>
@@ -14,38 +15,29 @@
     <script type="text/javascript" src="/events.js"></script>
     <script type="text/javascript" src="/poker.js"></script>
   </head>
-  <script type="text/template" id="tabletpl">
+  <script type="text/template" id="maintable">
     <div class="pokertable">
-      <!-- Top row -->
-      <div class="seat1 playerinfo" style="top: 5%; left: 25%;"></div>
-        <div class="seat1bet playerbet" style="top: 26%; left: 32%;"></div>
-      <div class="seat2 playerinfo" style="top: 5%; left: 50%;"></div>
-        <div class="seat2bet playerbet" style="top: 26%; left: 50%;"></div>
-      <div class="seat3 playerinfo" style="top: 5%; left: 75%;"></div>
-        <div class="seat3bet playerbet" style="top: 26%; left: 68%;"></div>
-      <!-- Right side -->
-      <div class="seat4 playerinfo" style="top: 28%; left: 85%;"></div>
-        <div class="seat4bet playerbet" style="top: 42%; left: 70%;"></div>
-      <div class="seat5 playerinfo" style="top: 52%; left: 85%;"></div>
-        <div class="seat5bet playerbet" style="top: 52%; left: 70%;"></div>
-      <!-- Bottom row -->
-      <div class="seat6 playerinfo" style="top: 75%; left: 75%;"></div>
-        <div class="seat6bet playerbet" style="top: 68%; left: 68%;"></div>
-      <div class="seat7 playerinfo" style="top: 75%; left: 50%;"></div>
-        <div class="seat7bet playerbet" style="top: 68%; left: 50%;"></div>
-      <div class="seat8 playerinfo" style="top: 75%; left: 25%;"></div>
-        <div class="seat8bet playerbet" style="top: 68%; left: 32%;"></div>
-      <!-- Left side -->
-      <div class="seat9 playerinfo" style="top: 52%; left: 15%;"></div>
-        <div class="seat9bet playerbet" style="top: 52%; left: 30%; text-align: left;"></div>
-      <div class="seat0 playerinfo" style="top: 28%; left: 15%;"></div>
-        <div class="seat0bet playerbet" style="top: 42%; left: 30%; text-align: left;"></div>
+    <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
+      <div class="playerinfo <%= seat %>">
+        <div class="playername"><%= player.DisplayName %><tt class="cash"><%= player.Chips %></tt></div>
+        <div class="playerpiles"><%= TableRenderer.ChipStack(player.Chips) %></div>
+        <div class="playerstate"><%= player.State %></div>
+        <div class="playerhand hand">
+        </div>
+      </div>
+    <% } %>
     </div>
   </script>
-  <script type="text/template" id="signuptpl">
+  <script type="text/template" id="tableview">
+    <div id="tables"></div>
+  </script>
+  <script type="text/template" id="bet">
+    <div class="playerbet"></div>
+  </script>
+  <script type="text/template" id="signupview">
     <h3>Players currently involved:</h3>
-    <ul id="signuplist">
-    </ul><br>
+    <div id="signups">
+    </div>
     <div class="invites" style="width: 400px; padding: 0.5em; border: 1px solid black;">
     <form id="joingameform">
       <input type="text" name="DisplayName" placeholder="Display Name" value=""><br>
@@ -56,18 +48,14 @@
     <button id="leavegame" class="gamebutton">Leave the Game</button>
     <button id="startgame" class="gamebutton">Start the Game!</button>
   </script>
-  <script type="text/template" id="signupplayertpl">
-    <div class="playername"><%= DisplayName %><% if (Poker.PLAYER_ID == PlayerId) { %> (You!)<% } %></div>
-  </script>
-  <script type="text/template" id="playertpl">
-    <div class="playername"><%= name %><tt class="cash"><%= chips %></tt></div>
-    <div class="playerpiles">&nbsp;</div>
-    <div class="playerstate"><%= state %></div>
-    <div class="playerhand hand">
-      <% for (var i = 0; i < cards.length; i++) { %>
-        <div class="card <%= cards[i] %>"></div>
-      <% } %>
-    </div>
+  <script type="text/template" id="signuplist">
+    <ul>
+    <% for (var pid in Players) { var pl = Players[pid]; %>
+      <li id="<%= pid %>">
+      <div class="playername"><%= pl.DisplayName %><% if (Poker.PLAYER_ID == pid) { %> (You!)<% } %></div>
+      </li>
+    <% } %>
+    </ul>
   </script>
   <body>
   </body>

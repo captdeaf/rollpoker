@@ -55,6 +55,9 @@ type PublicGameInfo struct {
 	GameSettings	GameSettings
 	Tables		map[string]TableState
 	Players		map[string]Player
+	CurrentBlinds	[]int
+	BlindTime	int
+	PausedAt	int // Nonzero if paused
 }
 
 type GameEvent struct {
@@ -88,8 +91,7 @@ func AddEvent(game *Game, playerid string, event string, args interface{}, logms
 // values for Public.State
 const (
 	NOGAME = "NOGAME"	// Default
-	CASHGAME = "CASHGAME"	// Cash in, cash out. Buy in or play
-	SITNGO = "SITNGO"	// Active Sit-N-Go going
+	INGAME = "INGAME"
 )
 
 type GameCommand struct {
