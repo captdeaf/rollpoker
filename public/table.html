@@ -18,11 +18,14 @@
   <script type="text/template" id="maintable">
     <div class="pokertable">
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
-      <div class="playerinfo <%= seat %>">
+      <div class="playerinfo <%= seat %> <%= player.State %>">
         <div class="playername"><%= player.DisplayName %><tt class="cash"><%= player.Chips %></tt></div>
         <div class="playerpiles"><%= TableRenderer.ChipStack(player.Chips) %></div>
         <div class="playerstate"><%= player.State %></div>
         <div class="playerhand hand">
+        <% _.each(player.Hand, function(cardval) { %>
+          <div class="card <%= cardval %>"></div>
+        <% }); %>
         </div>
       </div>
       <% if (player.Bet > 0) { %>
@@ -33,6 +36,12 @@
   </script>
   <script type="text/template" id="tableview">
     <div id="tables"></div>
+    <div class="GameButtons">
+      <button class="gamecommand" name="Bet", data-amount="50c">Bet 50</button>
+      <button class="gamecommand" name="Call">Call</button>
+      <button class="gamecommand" name="Fold">Fold</button>
+      <button class="gamecommand" name="Check">Check</button>
+    </div>
   </script>
   <script type="text/template" id="signupview">
     <h3>Players currently involved:</h3>

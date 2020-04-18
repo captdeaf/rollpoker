@@ -68,23 +68,47 @@ func (game *Game) ResetHand(tablename string, _ int) bool {
 	return true
 }
 
+func (game *Game) TableFor(playerid string) string {
+	for tn, table := range game.Public.Tables {
+		for _, pid := range table.Seats {
+			if playerid == pid {
+				return tn
+			}
+		}
+	}
+	return ""
+}
+
+func (game *Game) TableForPlayer(player *Player) string {
+	return game.TableFor(player.PlayerId)
+}
+
+func DoChoose(game *Game, tablename, playerid, state string) {
+	player := game.Public.Players[playerid]
+	player.State = state
+}
+
 func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
 	player := game.Public.Players[playerid]
 	table := game.Public.Tables[tablename]
 	// Reset all other CALLED and BET players' states to WAITING
 	if !auto {
 		for _, pid := range table.Seats {
-			if (game.Public.Players[pid].State == CALLED ||
-			    game.Public.Players[pid].State == BET) {
-				game.Public.Players[pid].State = WAITING
+			if (game.Public.Players[pid].State == CALLED || game.Public.Players[pid].State == BET) {
+				if (game.Public.Players[pid].Chips == 0) {
+					game.Public.Players[pid].State = ALLIN
+				} else {
+					game.Public.Players[pid].State = WAITING
+				}
 			}
 		}
 	}
 	if player.Chips <= amt {
 		amt = player.Chips
-		game.Public.Players[playerid].State = ALLIN
-	} else if !auto {
-		game.Public.Players[playerid].State = BET
+	}
+	if !auto {
+		// auto is true for blinds
+		DoChoose(game, tablename, playerid, BET)
 	}
 	player.Chips -= amt
 	player.Bet = amt
@@ -97,29 +121,37 @@ func (game *Game) HoldemBlinds(tablename string, _ int) bool {
 	table.Pot = 0
 	order := GetNextPlayers(game, table, table.Dealer)
 	if len(order) < 2 { return false }
-	firstid := ""
 	for idx, seat := range order {
 		playerid := table.Seats[seat]
-		game.Public.Players[playerid].State = WAITING
 		if idx < len(game.Public.CurrentBlinds) {
 			// DoBet sets ALLIN if needed
 			DoBet(game, tablename, playerid, game.Public.CurrentBlinds[idx], true)
 		} else {
-			if firstid == "" {
-				firstid = playerid
-			}
-			game.Public.Players[playerid].Bet = 0
+			break
 		}
-		// All players should be WAITING (or ALLIN), except firstid
 	}
-	if firstid == "" {
-		firstid = order[0]
-	}
-	game.Public.Players[firstid].State = TURN
 	return true
 }
 
-func (game *Game) BetRound(tablename string, isfirst int) bool {
+func (game *Game) SetWaiting(tablename string, _ int) bool {
+	// SetWaiting does two things:
+	// 1) Sets any active players WAITING
+	// 2) Sets any active players with 0 chips ALLIN
+	table := game.Public.Tables[tablename]
+	for _, pid := range table.Seats {
+		player := game.Public.Players[pid]
+		if player.State == CALLED || player.State == BET {
+			if player.Chips == 0 {
+				player.State = ALLIN
+			} else {
+				player.State = WAITING
+			}
+		}
+	}
+	return true
+}
+
+func (game *Game) BetRound(tablename string, _ int) bool {
 	// BetRound() is called at the start of a betting round, and when any
 	// bet, call, fold, etc is made. Simple check: If any WAITING,
 	// or only one WAITING and the rest ALLIN or FOLDED, we return true
@@ -133,44 +165,68 @@ func (game *Game) BetRound(tablename string, isfirst int) bool {
 	called := []string{}  // players with BET or CALLED status
 
 	table := game.Public.Tables[tablename]
-	for _, pid := range table.Seats {
+
+	dealorder := GetNextPlayers(game, table, table.Dealer)
+
+	// Who has highest bet?
+	betseat := table.Dealer
+	betmin := 0
+
+	for _, seat := range dealorder {
+		pid := table.Seats[seat]
 		player := game.Public.Players[pid]
-		if player.State == WAITING || player.State == TURN {
+		if player.Bet > betmin {
+			betmin = player.Bet
+			betseat = seat
+		}
+		if player.State == WAITING {
 			waiting = append(waiting, pid)
-		} else if (player.State == BET || player.State == CALLED) {
+		} else if player.State == BET || player.State == CALLED {
 			called = append(called, pid)
-		} else if (player.State == ALLIN) {
+			if player.State == BET {
+				betseat = seat
+			}
+		} else if player.State == ALLIN {
 			allins = append(allins, pid)
+		} else if player.State == TURN {
+			fmt.Println("How do we have a player with state TURN?")
 		}
 	}
-	if (len(waiting) + len(called) + len(allins)) == 1 {
+
+	if (len(waiting) + len(called) + len(allins)) < 1 {
+		fmt.Println("Error: How did waiting+called+allins get to be < 1?")
+		return false
+	} else if (len(waiting) + len(called) + len(allins)) == 1 {
 		// All but one have folded. Short-circuit and that
 		// player wins.
 		// TODO: Replace command set with ClosedWin and
 		// continue game
 		return true
-	} else if len(waiting) == 0 && len(called) == 1 && len(allins) > 0 {
-		// One or more players all-in. Other player called.
-		// No more need for bets.
+	} else if (len(waiting) + len(called)) == 1 && len(allins) > 0 {
+		// One or more players all-in. One non-allin player who has called or is waiting.
 		return true
-	} else if len(waiting) == 1 && len(called) == 0 && len(allins) > 0 {
-		// One waiter, and one or more allins.
-		// Two instances:
-		// 1) Player A all-ins, player B needs to call
-		// 2) B's called A. Flop is dealt, now WAITING again.
-		// If (1): return false, if (2): return true
-		for _, pid := range allins {
-			player := game.Public.Players[pid]
-			if player.Bet > 0 {
-				return false
-			}
-		}
+	} else if len(waiting) == 0 {
+		// Nobody is waiting. Continue.
 		return true
 	}
-	return len(waiting) == 0
+
+	// Multiple waiters. Who plays?
+
+	nextorder := GetNextPlayers(game, table, betseat)
+
+	for _, seat := range nextorder {
+		pid := table.Seats[seat]
+		player := game.Public.Players[pid]
+		if player.State == WAITING {
+			player.State = TURN
+			return false
+		}
+	}
+	fmt.Println("We should not get here...")
+	return false
 }
 
-func (game *Game) CollectPot(tablename string, isfirst int) bool {
+func (game *Game) CollectPot(tablename string, _ int) bool {
 	table := game.Public.Tables[tablename]
 	amt := 0
 	for _, pid := range table.Seats {
@@ -212,7 +268,31 @@ func GetNextPlayer(game *Game, table *TableState, seat string) string {
 	return GetNextPlayers(game, table, seat)[0]
 }
 
-func RunCommandTransaction(gamename string, tablename string) time.Duration {
+func RunCommandInTransaction(game *Game, tablename string) time.Duration {
+	table := game.Public.Tables[tablename]
+	cmd := table.Dolist[0]
+
+	method := reflect.ValueOf(game).MethodByName(cmd.Name)
+	if !method.IsValid() {
+		fmt.Printf("UNKNOWN COMMAND %s", cmd.Name)
+		return -1
+	}
+	fmt.Printf("Running: %s\n", cmd.Name)
+
+	args := []reflect.Value{ reflect.ValueOf(tablename), reflect.ValueOf(cmd.Arg) }
+	rval := method.Call(args)
+	table.Doing = cmd.Name
+	if rval[0].Bool() {
+		fmt.Printf("Popping: %s\n", cmd.Name)
+		table.Dolist = table.Dolist[1:]
+		fmt.Printf("Next: %v\n", table.Dolist[0])
+		fmt.Printf("Nextg: %v\n", game.Public.Tables[tablename].Dolist[0])
+		return cmd.Sleepfor
+	}
+	return -1
+}
+
+func RunCommandsTransaction(gamename string, tablename string) time.Duration {
 	// RunCommand:
 	//   1) Fetches a game, and pulls a table with Dolist instructions
 	//   2) Runs the first command
@@ -226,24 +306,18 @@ func RunCommandTransaction(gamename string, tablename string) time.Duration {
 					func(ctx context.Context, tx *firestore.Transaction) error {
 
 		game := FetchGame(gamename, tx)
-
-		table := game.Public.Tables[tablename]
-		cmd := table.Dolist[0]
-
-		method := reflect.ValueOf(game).MethodByName(cmd.Name)
-		if !method.IsValid() {
-			fmt.Printf("UNKNOWN COMMAND %s", cmd.Name)
+		if (game == nil) {
+			fmt.Println("FetchGame got a nil value")
 			return nil
 		}
 
-		args := []reflect.Value{ reflect.ValueOf(tablename), reflect.ValueOf(cmd.Arg) }
-		rval := method.Call(args)
-		docontinue := rval[0].Bool()
-		table.Doing = cmd.Name
-		if docontinue {
-			table.Dolist = table.Dolist[1:]
-			ret = cmd.Sleepfor
+		for {
+			ret = RunCommandInTransaction(game, tablename)
+			if ret != 0 {
+				break
+			}
 		}
+
 		SaveGame(game, tx)
 		return nil
 	});
@@ -254,8 +328,10 @@ func RunCommands(gamename string, tablename string, in_secs time.Duration) {
 	if in_secs > 0 {
 		time.Sleep(in_secs * time.Second)
 	}
-	result := RunCommandTransaction(gamename, tablename)
-	if result >= 0 {
+	result := RunCommandsTransaction(gamename, tablename)
+	if result == 0 {
+		fmt.Printf("Sleep of 0 should never be encountered in RunCommands")
+	} else if result > 0 {
 		go RunCommands(gamename, tablename, result)
 	}
 }
@@ -266,21 +342,25 @@ func init() {
 	GAME_COMMANDS = map[string]GameDef{
 		"texasholdem": {
 			{"ResetHand", 0, 0},
-			{"Shuffle", 0, 2},
-			{"DealAllDown", 2, 2},
-			{"HoldemBlinds", 0, 2},
-			{"BetRound", 1, 2},
+			{"Shuffle", 0, 0},
+			{"DealAllDown", 2, 0},
+			{"HoldemBlinds", 0, 0},
+			{"SetWaiting", 0, 2},
+			{"BetRound", 1, 0},
 			{"CollectPot", 0, 2},
-			{"Burn", 0, 2},
+			{"Burn", 0, 1},
 			{"TexFlop", 0, 2},
+			{"SetWaiting", 0, 0},
 			{"BetRound", 0, 2},
 			{"CollectPot", 0, 2},
-			{"Burn", 0, 2},
+			{"Burn", 0, 1},
 			{"TexTurn", 0, 2},
+			{"SetWaiting", 0, 0},
 			{"BetRound", 0, 2},
 			{"CollectPot", 0, 2},
-			{"Burn", 0, 2},
+			{"Burn", 0, 1},
 			{"TexRiver", 0, 2},
+			{"SetWaiting", 0, 0},
 			{"BetRound", 0, 2},
 			{"CollectPot", 0, 2},
 			{"Texwin", 0, 5},

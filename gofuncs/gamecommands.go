@@ -1,12 +1,14 @@
 package rollpoker
 
 import (
+	"time"
+	"fmt"
 	"math/rand"
 	"strings"
 	"strconv"
 )
 
-func (player *Player) StartGame(game *Game, gc *GameCommand) bool {
+func (player *Player) DoStartGame(game *Game, gc *GameCommand) bool {
 	// Sanity checks:
 	if game.Public.State != NOGAME { return false }
 	if len(game.Public.Players) < 2 { return false }
@@ -16,13 +18,18 @@ func (player *Player) StartGame(game *Game, gc *GameCommand) bool {
 	// So, we're trying to start a game.
 	// 1) Do we have enough players? Do we need multiple tables?
 	allPlayers := []string{}
-	settings := game.Private.OrigState
+
+	// Deep copy the Settings structure.
+	settings := *(game.Private.OrigState)
+	game.Public.GameSettings = &settings
+
 	for _, player := range game.Public.Players {
 		allPlayers = append(allPlayers, player.PlayerId)
 		player.Chips = settings.StartingChips
 		player.Bet = 0
 		player.Rank = 0
 		player.State = ""
+		player.Hand = []string{}
 	}
 	if len(allPlayers) > 10 {
 		// TODO: Multiple tables
@@ -50,8 +57,6 @@ func (player *Player) StartGame(game *Game, gc *GameCommand) bool {
 	game.Public.Tables["table0"] = &table
 	table.Dolist = GAME_COMMANDS["texasholdem"]
 
-	game.Public.GameSettings = game.Private.OrigState
-
 	blindstr := game.Public.GameSettings.BlindStructure[0]
 	if len(game.Public.GameSettings.BlindStructure) > 0 {
 		game.Public.GameSettings.BlindStructure = game.Public.GameSettings.BlindStructure[1:]
@@ -70,5 +75,25 @@ func (player *Player) StartGame(game *Game, gc *GameCommand) bool {
 
 	// TODO: Trigger start on all tables
 
+	// Don't start the RunCommands - this is special, we want to
+	// run the start for All tables by hand
+	i := time.Duration(1)
+	for tname, _ := range game.Public.Tables {
+		fmt.Printf("Calling RunCommands for %dth time\n", i)
+		go RunCommands(game.Name, tname, i)
+		i += 1
+	}
+	return false
+}
+
+func (player *Player) DoBet(game *Game, gc *GameCommand) bool {
+	if player.State != TURN { return false }
+	tablename := game.TableForPlayer(player)
+	ibet, _ := strconv.ParseInt(gc.Args["amount"], 10, 32)
+	ibet = 50 // Temp override
+	// TODO: Ensure they can bet. Minimum is blind *(or last raise),
+	// Maximum is their amount of chips. (if chips < min, min = chips)
+	fmt.Printf("Player %s bets %d", player.DisplayName, ibet)
+	DoBet(game, tablename, gc.PlayerId, int(ibet), false)
 	return true
 }

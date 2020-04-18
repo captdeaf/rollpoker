@@ -32,7 +32,7 @@
   }
 
   div.hand .card:not(:first-child) {
-    margin-left: -30px;
+    margin-left: -20px;
   }
 
   ul.pile {
@@ -84,6 +84,18 @@
     margin-left: -110px;
   }
 
+  div.playerinfo.TURN {
+    background-color: #ffff00aa;
+  }
+
+  div.playerinfo.BET {
+    background-color: #ffccccaa;
+  }
+
+  div.playerinfo.WAITING {
+    background-color: #ccffccaa;
+  }
+
   div.playername {
     padding: 5pt;
     font-size: 120%;
@@ -129,7 +141,7 @@
     bottom: 10px;
     right: 10px;
     transform-origin: 100% 100%;
-    transform: scale(0.4);
+    transform: scale(0.6);
   }
 
   div.playerpiles {
@@ -140,10 +152,34 @@
   }
 
   div.pokertable {
-    position: absolute;
-    top: 0px;
-    left: 0px;
+    position: relative;
     background-image: url('/feltbg.png');
     height: 600px;
     width: 1000px;
+    transform-origin: 0 0;
+    transform: scale(0.6);
+  }
+  
+  div#tables {
+    height: 370px;
+    width: 600px;
+  }
+
+  div.gamebuttons {
+    z-index: 10;
+  }
+
+  div.tables {
+    z-index: 40;
+  }
+
+  div.GameButtons {
+    background-color: #ddffddaa;
+    border: 1px solid red;
+  }
+
+  button.gamecommand {
+    display: block;
+    background-color: gray;
+    padding: 1em;
   }

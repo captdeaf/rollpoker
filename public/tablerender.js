@@ -6,16 +6,22 @@ var TableRenderer = {
   },
   Start: function() {
     $('body').html(TableRenderer.VIEW());
+    $('.gamecommand').click(function(evt) {
+      var me = $(this);
+      console.log(me.attr('name'), me.data());
+      Poker.SendCommand(me.attr('name'), me.data());
+    });
   },
   CHIP_VALS: "",
   Update: function(data) {
     if (data.GameSettings.ChipValues != TableRenderer.CHIP_VALS) {
-      console.log("UpdateChips with ", data.GameSettings.ChipValues);
       TableRenderer.UpdateChips(data.GameSettings.ChipValues);
       TableRenderer.CHIP_VALS = data.GameSettings.ChipValues;
     }
+    // TODO: Pick my table out from multiple tables.
     var tableData = data.Tables["table0"];
     var table = $(TableRenderer.TABLE({table:tableData, players: data.Players}));
+    $('#tables').empty();
     $('#tables').append(table);
   },
   Setup: function() {
@@ -33,11 +39,11 @@ var TableRenderer = {
       document.getElementsByTagName('head')[0].appendChild(style);
     }
 
-    var cards = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K"];
-    var suits = ["S", "C", "D", "H"];
+    var cards = ["a", "2", "3", "4", "5", "6", "7", "8", "9", "t", "j", "q", "k"];
+    var suits = ["s", "c", "d", "h"];
     for (var c = 0; c < cards.length; c++) {
       for (var s = 0; s < suits.length; s++) {
-        makeCard(c, 0, suits[s] + cards[c]);
+        makeCard(c, s, suits[s] + cards[c]);
       }
     }
 

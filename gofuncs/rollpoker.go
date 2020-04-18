@@ -302,7 +302,10 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		gc.Name = "OrangePanda"
 	}
 
-	FIRESTORE_CLIENT.RunTransaction(context.Background(),
+	dorun := false
+	dosave := false
+
+	txerr := FIRESTORE_CLIENT.RunTransaction(context.Background(),
 					func(ctx context.Context, tx *firestore.Transaction) error {
 
 		game := FetchGame(gc.Name, tx)
@@ -322,29 +325,44 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Unable to register", http.StatusBadRequest)
 				return nil
 			}
+			dosave = true
 		} else {
+			// TODO: DELETE THIS BEFORE PUSHING.
+			// It's just here for testing
+			for pid, tplayer := range game.Public.Players {
+				if tplayer.State == TURN {
+					gc.PlayerId = pid
+					player = tplayer
+					break
+				}
+			}
 			if player == nil {
 				// If PlayerId is nil, the only thing the player can do is "register" / invite.
 				http.Error(w, "You are not a player", http.StatusBadRequest)
 				return nil
 			} else {
 				// Call Command by name if it has one
-				method := reflect.ValueOf(player).MethodByName(gc.Command)
+				method := reflect.ValueOf(player).MethodByName("Do" + gc.Command)
 
 				if method.IsValid() {
 					rval := method.Call([]reflect.Value{reflect.ValueOf(game), reflect.ValueOf(&gc)})
-					fmt.Fprintf(w, "%v", rval[0].Bool())
+					dosave = true
+					dorun = rval[0].Bool()
 				} else {
 					return nil
 				}
 			}
 		}
-
-		SaveGame(game, tx)
-
-		for tname, _ := range game.Public.Tables {
-			go RunCommands(game.Name, tname, 2)
+		if dosave {
+			SaveGame(game, tx)
+		}
+		if dorun {
+			go RunCommands(game.Name, game.TableForPlayer(player), 1)
 		}
 		return nil
 	})
+
+	if txerr != nil {
+		fmt.Printf("Error: %v\n", txerr)
+	}
 }
