@@ -29,15 +29,25 @@
         </div>
       </div>
       <% if (player.Bet > 0) { %>
-        <div class="<%= seat %>bet playerbet"><%= TableRenderer.ChipStack(player.Bet) %></div>
+        <div class="<%= seat %>bet playerbet"><%= TableRenderer.ChipStack(player.Bet) %><tt class="betamt"><%= player.Bet %></tt></div>
       <% } %>
+    <% } %>
+    <% if (table.Pot > 0) { %>
+      <div class="pot"><%= TableRenderer.ChipStack(table.Pot) %><tt class="betamt"><%= table.Pot %></tt></div>
+    <% } %>
+    <% if (table.Cards.board) { %>
+      <div class="board">
+      <% _.each(table.Cards.board, function(cardval) { %>
+        <div class="card <%= cardval %>"></div>
+      <% }); %>
+      </div>
     <% } %>
     </div>
   </script>
   <script type="text/template" id="tableview">
     <div id="tables"></div>
     <div class="GameButtons">
-      <button class="gamecommand" name="Bet", data-amount="50c">Bet 50</button>
+      <button class="gamecommand" name="Bet", data-amount="50">Bet 50</button>
       <button class="gamecommand" name="Call">Call</button>
       <button class="gamecommand" name="Fold">Fold</button>
       <button class="gamecommand" name="Check">Check</button>

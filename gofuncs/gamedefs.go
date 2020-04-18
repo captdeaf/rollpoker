@@ -35,6 +35,36 @@ func (game *Game) Shuffle(tablename string, _ int) bool {
 	return true // We're done shuffling.
 }
 
+func (game *Game) Burn(tablename string, _ int) bool {
+	deck := game.Private.TableDecks[tablename]
+	game.Private.TableDecks[tablename] = deck[1:]
+	return true
+}
+
+func (game *Game) TexFlop(tablename string, _ int) bool {
+	table := game.Public.Tables[tablename]
+	deck := game.Private.TableDecks[tablename]
+	table.Cards["board"] = deck[:3]
+	game.Private.TableDecks[tablename] = deck[3:]
+	return true
+}
+
+func (game *Game) TexTurn(tablename string, _ int) bool {
+	table := game.Public.Tables[tablename]
+	deck := game.Private.TableDecks[tablename]
+	table.Cards["board"] = append(table.Cards["board"], deck[0])
+	game.Private.TableDecks[tablename] = deck[1:]
+	return true
+}
+
+func (game *Game) TexRiver(tablename string, _ int) bool {
+	table := game.Public.Tables[tablename]
+	deck := game.Private.TableDecks[tablename]
+	table.Cards["board"] = append(table.Cards["board"], deck[0])
+	game.Private.TableDecks[tablename] = deck[1:]
+	return true
+}
+
 func (game *Game) DealAllDown(tablename string, count int) bool {
 	// Just for kicks, though our users will never know, let's deal it as if
 	// it's a real poker game.
@@ -88,6 +118,20 @@ func DoChoose(game *Game, tablename, playerid, state string) {
 	player.State = state
 }
 
+func DoCall(game *Game, tablename, playerid string, amt int) {
+	player := game.Public.Players[playerid]
+	table := game.Public.Tables[tablename]
+	if player.Chips <= amt {
+		amt = player.Chips
+	}
+	DoChoose(game, tablename, playerid, CALLED)
+	player.Chips -= amt
+	player.Bet += amt
+	if player.Bet > table.CurBet {
+		fmt.Printf("How did player.Bet > table.CurBet in DoCall?")
+	}
+}
+
 func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
 	player := game.Public.Players[playerid]
 	table := game.Public.Tables[tablename]
@@ -111,7 +155,16 @@ func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
 		DoChoose(game, tablename, playerid, BET)
 	}
 	player.Chips -= amt
-	player.Bet = amt
+	player.Bet += amt
+	if amt > table.MinBet {
+		table.MinBet = amt
+	}
+	if player.Bet > table.CurBet {
+		table.CurBet = player.Bet
+	}
+	if auto && player.Chips <= 0 {
+		player.State = ALLIN
+	}
 }
 
 func (game *Game) HoldemBlinds(tablename string, _ int) bool {
@@ -130,13 +183,16 @@ func (game *Game) HoldemBlinds(tablename string, _ int) bool {
 			break
 		}
 	}
+	table.CurBet = game.Public.CurrentBlinds[len(game.Public.CurrentBlinds)-1]
+	table.MinBet = game.Public.CurrentBlinds[len(game.Public.CurrentBlinds)-1]
 	return true
 }
 
-func (game *Game) SetWaiting(tablename string, _ int) bool {
-	// SetWaiting does two things:
+func (game *Game) ClearBets(tablename string, _ int) bool {
+	// ClearBets does three things:
 	// 1) Sets any active players WAITING
 	// 2) Sets any active players with 0 chips ALLIN
+	// 3) Sets table.MinBet and table.CurBet
 	table := game.Public.Tables[tablename]
 	for _, pid := range table.Seats {
 		player := game.Public.Players[pid]
@@ -148,6 +204,8 @@ func (game *Game) SetWaiting(tablename string, _ int) bool {
 			}
 		}
 	}
+	table.MinBet = game.Public.CurrentBlinds[len(game.Public.CurrentBlinds) - 1]
+	table.CurBet = 0
 	return true
 }
 
@@ -339,31 +397,30 @@ func RunCommands(gamename string, tablename string, in_secs time.Duration) {
 var GAME_COMMANDS map[string]GameDef
 
 func init() {
-	GAME_COMMANDS = map[string]GameDef{
-		"texasholdem": {
-			{"ResetHand", 0, 0},
-			{"Shuffle", 0, 0},
-			{"DealAllDown", 2, 0},
-			{"HoldemBlinds", 0, 0},
-			{"SetWaiting", 0, 2},
-			{"BetRound", 1, 0},
-			{"CollectPot", 0, 2},
-			{"Burn", 0, 1},
-			{"TexFlop", 0, 2},
-			{"SetWaiting", 0, 0},
-			{"BetRound", 0, 2},
-			{"CollectPot", 0, 2},
-			{"Burn", 0, 1},
-			{"TexTurn", 0, 2},
-			{"SetWaiting", 0, 0},
-			{"BetRound", 0, 2},
-			{"CollectPot", 0, 2},
-			{"Burn", 0, 1},
-			{"TexRiver", 0, 2},
-			{"SetWaiting", 0, 0},
-			{"BetRound", 0, 2},
-			{"CollectPot", 0, 2},
-			{"Texwin", 0, 5},
-		},
+	GAME_COMMANDS = make(map[string]GameDef)
+	GAME_COMMANDS["texasholdem"] = GameDef{
+		{"ResetHand", 0, 0},
+		{"Shuffle", 0, 0},
+		{"DealAllDown", 2, 0},
+		{"ClearBets", 0, 1},
+		{"HoldemBlinds", 0, 0},
+		{"BetRound", 1, 0},
+		{"CollectPot", 0, 0},
+		{"Burn", 0, 0},
+		{"TexFlop", 0, 1},
+		{"ClearBets", 0, 0},
+		{"BetRound", 0, 1},
+		{"CollectPot", 0, 0},
+		{"Burn", 0, 0},
+		{"TexTurn", 0, 1},
+		{"ClearBets", 0, 0},
+		{"BetRound", 0, 1},
+		{"CollectPot", 0, 0},
+		{"Burn", 0, 0},
+		{"TexRiver", 0, 1},
+		{"ClearBets", 0, 0},
+		{"BetRound", 0, 1},
+		{"CollectPot", 0, 0},
+		{"Texwin", 0, 7},
 	}
 }

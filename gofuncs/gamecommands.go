@@ -8,12 +8,12 @@ import (
 	"strconv"
 )
 
-func (player *Player) DoStartGame(game *Game, gc *GameCommand) bool {
+func (player *Player) TryStartGame(game *Game, gc *GameCommand) int {
 	// Sanity checks:
-	if game.Public.State != NOGAME { return false }
-	if len(game.Public.Players) < 2 { return false }
+	if game.Public.State != NOGAME { return ERR }
+	if len(game.Public.Players) < 2 { return ERR }
 	// TODO: MTT support
-	if len(game.Public.Players) > 10 { return false }
+	if len(game.Public.Players) > 10 { return ERR }
 
 	// So, we're trying to start a game.
 	// 1) Do we have enough players? Do we need multiple tables?
@@ -55,7 +55,9 @@ func (player *Player) DoStartGame(game *Game, gc *GameCommand) bool {
 	// First player is dealer, because player position is random, anyway.
 	table.Dealer = ""
 	game.Public.Tables["table0"] = &table
-	table.Dolist = GAME_COMMANDS["texasholdem"]
+	table.Dolist = make(GameDef, len(GAME_COMMANDS["texasholdem"]))
+	copy(table.Dolist, GAME_COMMANDS["texasholdem"])
+	fmt.Printf("Got: %v\n", table.Dolist)
 
 	blindstr := game.Public.GameSettings.BlindStructure[0]
 	if len(game.Public.GameSettings.BlindStructure) > 0 {
@@ -79,21 +81,59 @@ func (player *Player) DoStartGame(game *Game, gc *GameCommand) bool {
 	// run the start for All tables by hand
 	i := time.Duration(1)
 	for tname, _ := range game.Public.Tables {
-		fmt.Printf("Calling RunCommands for %dth time\n", i)
 		go RunCommands(game.Name, tname, i)
 		i += 1
 	}
-	return false
+	return SAVE
 }
 
-func (player *Player) DoBet(game *Game, gc *GameCommand) bool {
-	if player.State != TURN { return false }
+func (player *Player) TryCheck(game *Game, gc *GameCommand) int {
+	if player.State != TURN { return ERR }
 	tablename := game.TableForPlayer(player)
-	ibet, _ := strconv.ParseInt(gc.Args["amount"], 10, 32)
-	ibet = 50 // Temp override
-	// TODO: Ensure they can bet. Minimum is blind *(or last raise),
+	table := game.Public.Tables[tablename]
+
+	if table.CurBet != player.Bet {
+		return ERR
+	}
+
 	// Maximum is their amount of chips. (if chips < min, min = chips)
-	fmt.Printf("Player %s bets %d", player.DisplayName, ibet)
+	fmt.Printf("Player %s checks for %d", player.DisplayName, 0)
+	DoCall(game, tablename, gc.PlayerId, 0)
+	return SAVE|RUN
+}
+
+func (player *Player) TryCall(game *Game, gc *GameCommand) int {
+	if player.State != TURN { return ERR }
+	tablename := game.TableForPlayer(player)
+	table := game.Public.Tables[tablename]
+
+	remaining := table.CurBet - player.Bet
+	if remaining > player.Chips {
+		remaining = player.Chips
+	}
+
+	// Maximum is their amount of chips. (if chips < min, min = chips)
+	fmt.Printf("Player %s calls for %d", player.DisplayName, remaining)
+	DoCall(game, tablename, gc.PlayerId, remaining)
+	return SAVE|RUN
+}
+
+func (player *Player) TryBet(game *Game, gc *GameCommand) int {
+	// This is a call PLUS bet, as TryBet is used for both betting
+	// and raising
+	if player.State != TURN { return ERR }
+	tablename := game.TableForPlayer(player)
+	table := game.Public.Tables[tablename]
+	i64bet, _ := strconv.ParseInt(gc.Args["amount"], 10, 32)
+	ibet := int(i64bet)
+
+	// A raise.
+	actualbet := ibet + (table.CurBet - player.Bet)
+	if actualbet > player.Chips { return ERR }
+
+	// TODO: Ensure they can bet.
+	// Maximum is their amount of chips. (if chips < min, min = chips)
+	fmt.Printf("Player %s bets %s (%d)", player.DisplayName, gc.Args["amount"], ibet)
 	DoBet(game, tablename, gc.PlayerId, int(ibet), false)
-	return true
+	return SAVE|RUN
 }

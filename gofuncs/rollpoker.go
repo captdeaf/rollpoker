@@ -41,6 +41,7 @@ type Player struct {
 	Rank		int		// Assigned on Bust out or Game won
 	Chips		int		// 1500
 	Bet		int		// Current amount bet // inside the circle
+	TotalBet	int		// Running total
 	State		string		// "Waiting" "Folded" etc
 	Hand		[]string	// "ha sa"
 }
@@ -52,6 +53,8 @@ type TableState struct {
 	Dolist		GameDef		// GAME_COMMANDS["texasholdem"], etc
 	Cards		map[string][]string // "flop": ["ha", "hk", "hq"], "turn": ...
 	Doing		string		// Command name, in case we can reflect it client-side
+	MinBet		int		// Big blind, or high bet so far.
+	CurBet		int		// Sum of all bets and raises so far
 }
 
 type PublicGameInfo struct {
@@ -88,6 +91,12 @@ const (
 	ALLIN = "ALLIN"		// Has no more chips left.
 )
 
+const (
+	SAVE = 0x01
+	RUN = 0x02
+	ERR = 0
+)
+
 func AddEvent(game *Game, playerid string, event string, args interface{}, logmsg string) {
 }
 
@@ -103,6 +112,7 @@ type GameCommand struct {
 	PlayerKey	string
 	Command		string
 	Args		map[string] string
+	ErrorMessage	string
 }
 
 var FIRESTORE_CLIENT *firestore.Client
@@ -301,6 +311,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		gc.Name = "OrangePanda"
 	}
+	gc.ErrorMessage = ""
 
 	dorun := false
 	dosave := false
@@ -342,16 +353,24 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 				return nil
 			} else {
 				// Call Command by name if it has one
-				method := reflect.ValueOf(player).MethodByName("Do" + gc.Command)
+				method := reflect.ValueOf(player).MethodByName("Try" + gc.Command)
 
 				if method.IsValid() {
 					rval := method.Call([]reflect.Value{reflect.ValueOf(game), reflect.ValueOf(&gc)})
-					dosave = true
-					dorun = rval[0].Bool()
+					iret := rval[0].Int()
+					dorun = iret & RUN == RUN
+					dosave = iret & SAVE == SAVE
 				} else {
 					return nil
 				}
 			}
+		}
+		if gc.ErrorMessage != "" {
+			http.Error(w, gc.ErrorMessage, http.StatusBadRequest)
+		} else if dosave == false {
+			http.Error(w, "You can't do that", http.StatusBadRequest)
+		} else {
+			fmt.Fprintf(w, "success");
 		}
 		if dosave {
 			SaveGame(game, tx)

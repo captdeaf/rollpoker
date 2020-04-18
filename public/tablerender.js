@@ -8,8 +8,12 @@ var TableRenderer = {
     $('body').html(TableRenderer.VIEW());
     $('.gamecommand').click(function(evt) {
       var me = $(this);
-      console.log(me.attr('name'), me.data());
-      Poker.SendCommand(me.attr('name'), me.data());
+      var dat = me.data();
+      for (var i in dat) {
+        dat[i] = "" + dat[i];
+      }
+      console.log(me.attr('name'), dat);
+      Poker.SendCommand(me.attr('name'), dat);
     });
   },
   CHIP_VALS: "",
