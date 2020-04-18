@@ -31,7 +31,7 @@ type PrivateGameInfo struct {
 	PlayerKeys	map[string]string	// KillerOrangeHouse:FooBarBaz
 	TableDecks	map[string][]string	// "table0": ["ha", "s3", ...], ...
 	AdminPassword	string			// "hunter2"
-	OrigState	GameSettings		// Original game state for restart/new game/etc
+	OrigState	*GameSettings		// Original game state for restart/new game/etc
 }
 
 type Player struct {
@@ -49,11 +49,14 @@ type TableState struct {
 	Seats		map[string]string	// seat0...seat9 to PlayerId
 	Pot		int		// 200 ... total in pot, but not in bets
 	Dealer		string		// seat0...seat9
+	Dolist		GameDef		// GAME_COMMANDS["texasholdem"], etc
+	Cards		map[string][]string // "flop": ["ha", "hk", "hq"], "turn": ...
+	Doing		string		// Command name, in case we can reflect it client-side
 }
 
 type PublicGameInfo struct {
 	State		string	// "NOGAME", "CASH", "SITNGO", etc.
-	GameSettings	GameSettings
+	GameSettings	*GameSettings
 	Tables		map[string]*TableState
 	Players		map[string]*Player
 	CurrentBlinds	[]int
@@ -76,7 +79,6 @@ type Game struct {
 }
 
 const (
-	BUSTED = "BUSTED"	// Never changes unless restart or cash buyin.
 	FOLDED = "FOLDED"	// Out of this hand
 
 	TURN = "TURN"		// It's their turn to do something
@@ -103,7 +105,7 @@ type GameCommand struct {
 	Args		map[string] string
 }
 
-var client *firestore.Client
+var FIRESTORE_CLIENT *firestore.Client
 
 func init() {
 	ctx := context.Background()
@@ -111,9 +113,9 @@ func init() {
 	_, err = os.Stat("firebase-key.json")
 	if err == nil {
 		opt := option.WithCredentialsFile("firebase-key.json")
-		client, err = firestore.NewClient(ctx, "rollpoker", opt)
+		FIRESTORE_CLIENT, err = firestore.NewClient(ctx, "rollpoker", opt)
 	} else {
-		client, err = firestore.NewClient(ctx, "rollpoker")
+		FIRESTORE_CLIENT, err = firestore.NewClient(ctx, "rollpoker")
 	}
 	if err != nil {
 		log.Printf("Can't get client: %v", err)
@@ -168,12 +170,16 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 	newgame.Private.PlayerKeys = make(map[string]string)
 	newgame.Private.TableDecks = make(map[string][]string)
 	newgame.Private.AdminPassword = args["AdminPassword"]
-	newgame.Private.OrigState = settings
+	newgame.Private.OrigState = &settings
 
 	newgame.Public.Tables = make(map[string]*TableState)
 	newgame.Public.State = NOGAME
 
-	SaveGame(&newgame)
+	FIRESTORE_CLIENT.RunTransaction(context.Background(),
+					func(ctx context.Context, tx *firestore.Transaction) error {
+		SaveGame(&newgame, tx)
+		return nil
+	})
 
 	var newgr GameResponse
 	newgr.Name = newgame.Name
@@ -189,11 +195,10 @@ type GetStateRequest struct {
 	PlayerKey	string
 }
 
-func FetchGame(name string) *Game {
+func FetchGame(name string, tx *firestore.Transaction) *Game {
 	var game Game
-	privRef := client.Doc("private/" + name)
-	ctx := context.Background()
-	priv, err := privRef.Get(ctx)
+	privRef := FIRESTORE_CLIENT.Doc("private/" + name)
+	priv, err := tx.Get(privRef)
 	if err != nil {
 		log.Printf("Can't get snapshot: %v", err)
 		return nil
@@ -204,8 +209,8 @@ func FetchGame(name string) *Game {
 		return nil
 	}
 
-	pubRef := client.Doc("public/" + name)
-	pub, err := pubRef.Get(ctx)
+	pubRef := FIRESTORE_CLIENT.Doc("public/" + name)
+	pub, err := tx.Get(pubRef)
 	if err != nil {
 		log.Printf("Can't get snapshot: %v", err)
 		return nil
@@ -219,14 +224,16 @@ func FetchGame(name string) *Game {
 	return &game
 }
 
-func SaveGame(game *Game) {
+func SaveGame(game *Game, tx *firestore.Transaction) {
 	// We save to two locations. Private to private/<name>, public to public/<name>
-	_, err := client.Doc("private/" + game.Name).Set(context.Background(), game.Private)
+	privref := FIRESTORE_CLIENT.Doc("private/" + game.Name)
+	err := tx.Set(privref, game.Private)
 	if err != nil {
 		fmt.Printf("Error saving private: %v", err)
 		return
 	}
-	_, err = client.Doc("public/" + game.Name).Set(context.Background(), game.Public)
+	pubref := FIRESTORE_CLIENT.Doc("public/" + game.Name)
+	err = tx.Set(pubref, game.Public)
 	if err != nil {
 		fmt.Printf("Error saving public: %v", err)
 		return
@@ -281,7 +288,6 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 		game.Public.Players = make(map[string]*Player)
 	}
 	game.Public.Players[player.PlayerId] = &player
-	SaveGame(game)
 
 	return true
 }
@@ -296,37 +302,49 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		gc.Name = "OrangePanda"
 	}
 
-	game := FetchGame(gc.Name)
-	if game == nil {
-		http.Error(w, "Unknown Game", http.StatusBadRequest)
-		return
-	}
+	FIRESTORE_CLIENT.RunTransaction(context.Background(),
+					func(ctx context.Context, tx *firestore.Transaction) error {
 
-	pkey, has := game.Private.PlayerKeys[gc.PlayerId]
-	if has && pkey == gc.PlayerKey {
-		player = game.Public.Players[gc.PlayerId]
-	}
-
-	fmt.Println("Got", gc.Command)
-
-	if gc.Command == "invite" {
-		if !RegisterAccount(game, &gc) {
-			http.Error(w, "Unable to register", http.StatusBadRequest)
+		game := FetchGame(gc.Name, tx)
+		if game == nil {
+			http.Error(w, "Unknown Game", http.StatusBadRequest)
 		}
-		return
-	}
 
-	if player == nil {
-		// If PlayerId is nil, the only thing the player can do is "register" / invite.
-		http.Error(w, "You are not a player", http.StatusBadRequest)
-		return
-	}
+		pkey, has := game.Private.PlayerKeys[gc.PlayerId]
+		if has && pkey == gc.PlayerKey {
+			player = game.Public.Players[gc.PlayerId]
+		}
 
-	// Call Command by name if it has one
-	method := reflect.ValueOf(game).MethodByName(gc.Command)
+		fmt.Println("Got", gc.Command)
 
-	if method.IsValid() {
-		rval := method.Call([]reflect.Value{reflect.ValueOf(player), reflect.ValueOf(&gc)})
-		fmt.Fprintf(w, "%v", rval[0].Bool())
-	}
+		if gc.Command == "invite" {
+			if !RegisterAccount(game, &gc) {
+				http.Error(w, "Unable to register", http.StatusBadRequest)
+				return nil
+			}
+		} else {
+			if player == nil {
+				// If PlayerId is nil, the only thing the player can do is "register" / invite.
+				http.Error(w, "You are not a player", http.StatusBadRequest)
+				return nil
+			} else {
+				// Call Command by name if it has one
+				method := reflect.ValueOf(player).MethodByName(gc.Command)
+
+				if method.IsValid() {
+					rval := method.Call([]reflect.Value{reflect.ValueOf(game), reflect.ValueOf(&gc)})
+					fmt.Fprintf(w, "%v", rval[0].Bool())
+				} else {
+					return nil
+				}
+			}
+		}
+
+		SaveGame(game, tx)
+
+		for tname, _ := range game.Public.Tables {
+			go RunCommands(game.Name, tname, 2)
+		}
+		return nil
+	})
 }

@@ -1,16 +1,17 @@
 package rollpoker
 
 import (
-	"time"
 	"math/rand"
 	"strings"
 	"strconv"
 )
 
-func (game *Game) StartGame(player *Player, gc *GameCommand) bool {
-	// if game.Public.State != NOGAME {
-		// return false
-	// }
+func (player *Player) StartGame(game *Game, gc *GameCommand) bool {
+	// Sanity checks:
+	if game.Public.State != NOGAME { return false }
+	if len(game.Public.Players) < 2 { return false }
+	// TODO: MTT support
+	if len(game.Public.Players) > 10 { return false }
 
 	// So, we're trying to start a game.
 	// 1) Do we have enough players? Do we need multiple tables?
@@ -23,12 +24,8 @@ func (game *Game) StartGame(player *Player, gc *GameCommand) bool {
 		player.Rank = 0
 		player.State = ""
 	}
-	if len(allPlayers) < 2 {
-		return false
-	}
 	if len(allPlayers) > 10 {
 		// TODO: Multiple tables
-		return false
 	}
 	// 2) Shuffle the players and assign them seats.
 	// We assign basically bouncing back and forth across the table to
@@ -49,8 +46,9 @@ func (game *Game) StartGame(player *Player, gc *GameCommand) bool {
 		table.Seats[allSeats[seatnum]] = pid
 	}
 	// First player is dealer, because player position is random, anyway.
-	table.Dealer = allPlayers[0]
+	table.Dealer = ""
 	game.Public.Tables["table0"] = &table
+	table.Dolist = GAME_COMMANDS["texasholdem"]
 
 	game.Public.GameSettings = game.Private.OrigState
 
@@ -70,15 +68,7 @@ func (game *Game) StartGame(player *Player, gc *GameCommand) bool {
 		game.Public.CurrentBlinds[i] = int(ival)
 	}
 
-	SaveGame(game)
-
-	go WaitAndDeal(game)
+	// TODO: Trigger start on all tables
 
 	return true
-}
-
-func WaitAndDeal(game *Game) {
-	time.Sleep(5 * time.Second)
-
-	// find Dealer, set up rotation, and deal.
 }
