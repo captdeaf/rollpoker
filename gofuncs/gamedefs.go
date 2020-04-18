@@ -65,6 +65,13 @@ func (game *Game) TexRiver(tablename string, _ int) bool {
 	return true
 }
 
+func (game *Game) NewGame(tablename string, count int) bool {
+	table := game.Public.Tables[tablename]
+	table.Dolist = make(GameDef, len(GAME_COMMANDS["texasholdem"]))
+	copy(table.Dolist, GAME_COMMANDS["texasholdem"])
+	return true
+}
+
 func (game *Game) DealAllDown(tablename string, count int) bool {
 	// Just for kicks, though our users will never know, let's deal it as if
 	// it's a real poker game.
@@ -86,12 +93,34 @@ func (game *Game) DealAllDown(tablename string, count int) bool {
 	return true
 }
 
+func (game *Game) FoldedWin(tablename string, _ int) bool {
+	// There should only be one active player when this is called.
+	// All others should be FOLDED
+	table := game.Public.Tables[tablename]
+	active := []*Player{}
+	for _, playerid := range table.Seats {
+		player := game.Public.Players[playerid]
+
+		if player.State == WAITING || player.State == BET || player.State == CALLED {
+			active = append(active, player)
+		}
+	}
+	if len(active) != 1 {
+		fmt.Printf("ERROR: FoldedWin with %d active?", len(active))
+		return false
+	}
+	player := active[0]
+	player.Chips += table.Pot
+	table.Pot = 0
+	return true
+}
+
 func (game *Game) ResetHand(tablename string, _ int) bool {
 	table := game.Public.Tables[tablename]
 	table.Pot = 0
 	for _, playerid := range table.Seats {
 		game.Public.Players[playerid].Bet = 0
-		game.Public.Players[playerid].Hand = []string{}
+		game.Public.Players[playerid].Hand = make([]string, 0)
 		game.Public.Players[playerid].State = WAITING
 		table.Cards = make(map[string][]string)
 	}
@@ -116,6 +145,10 @@ func (game *Game) TableForPlayer(player *Player) string {
 func DoChoose(game *Game, tablename, playerid, state string) {
 	player := game.Public.Players[playerid]
 	player.State = state
+}
+
+func DoFold(game *Game, tablename, playerid string) {
+	DoChoose(game, tablename, playerid, FOLDED)
 }
 
 func DoCall(game *Game, tablename, playerid string, amt int) {
@@ -252,13 +285,13 @@ func (game *Game) BetRound(tablename string, _ int) bool {
 	}
 
 	if (len(waiting) + len(called) + len(allins)) < 1 {
-		fmt.Println("Error: How did waiting+called+allins get to be < 1?")
+		fmt.Println("ERROR: How did waiting+called+allins get to be < 1?")
 		return false
 	} else if (len(waiting) + len(called) + len(allins)) == 1 {
 		// All but one have folded. Short-circuit and that
 		// player wins.
-		// TODO: Replace command set with ClosedWin and
-		// continue game
+		table.Dolist = make(GameDef, len(GAME_COMMANDS["_foldedwin"]))
+		copy(table.Dolist, GAME_COMMANDS["_foldedwin"])
 		return true
 	} else if (len(waiting) + len(called)) == 1 && len(allins) > 0 {
 		// One or more players all-in. One non-allin player who has called or is waiting.
@@ -282,6 +315,10 @@ func (game *Game) BetRound(tablename string, _ int) bool {
 	}
 	fmt.Println("We should not get here...")
 	return false
+}
+
+func (game *Game) Idle(_ string, _ int) bool {
+	return true
 }
 
 func (game *Game) CollectPot(tablename string, _ int) bool {
@@ -399,6 +436,7 @@ var GAME_COMMANDS map[string]GameDef
 func init() {
 	GAME_COMMANDS = make(map[string]GameDef)
 	GAME_COMMANDS["texasholdem"] = GameDef{
+		{"Idle", 0, 0}, // This gets tossed on new games.
 		{"ResetHand", 0, 0},
 		{"Shuffle", 0, 0},
 		{"DealAllDown", 2, 0},
@@ -422,5 +460,12 @@ func init() {
 		{"BetRound", 0, 1},
 		{"CollectPot", 0, 0},
 		{"Texwin", 0, 7},
+		{"NewGame", 0, 0},
+	}
+	GAME_COMMANDS["_foldedwin"] = GameDef {
+		{"Burn", 0, 0}, // This gets chopped off by return true
+		{"CollectPot", 0, 0},
+		{"FoldedWin", 0, 5},
+		{"NewGame", 0, 0},
 	}
 }

@@ -102,6 +102,15 @@ func (player *Player) TryCheck(game *Game, gc *GameCommand) int {
 	return SAVE|RUN
 }
 
+func (player *Player) TryFold(game *Game, gc *GameCommand) int {
+	if player.State != TURN { return ERR }
+	tablename := game.TableForPlayer(player)
+
+	fmt.Printf("Player %s folds\n", player.DisplayName)
+	DoFold(game, tablename, gc.PlayerId)
+	return SAVE|RUN
+}
+
 func (player *Player) TryCall(game *Game, gc *GameCommand) int {
 	if player.State != TURN { return ERR }
 	tablename := game.TableForPlayer(player)
@@ -113,7 +122,7 @@ func (player *Player) TryCall(game *Game, gc *GameCommand) int {
 	}
 
 	// Maximum is their amount of chips. (if chips < min, min = chips)
-	fmt.Printf("Player %s calls for %d", player.DisplayName, remaining)
+	fmt.Printf("Player %s calls for %d\n", player.DisplayName, remaining)
 	DoCall(game, tablename, gc.PlayerId, remaining)
 	return SAVE|RUN
 }
@@ -133,7 +142,7 @@ func (player *Player) TryBet(game *Game, gc *GameCommand) int {
 
 	// TODO: Ensure they can bet.
 	// Maximum is their amount of chips. (if chips < min, min = chips)
-	fmt.Printf("Player %s bets %s (%d)", player.DisplayName, gc.Args["amount"], ibet)
-	DoBet(game, tablename, gc.PlayerId, int(ibet), false)
+	fmt.Printf("Player %s bets %s (%d)", player.DisplayName, gc.Args["amount"], actualbet)
+	DoBet(game, tablename, gc.PlayerId, int(actualbet), false)
 	return SAVE|RUN
 }
