@@ -93,6 +93,35 @@ func (game *Game) DealAllDown(tablename string, count int) bool {
 	return true
 }
 
+type PlayerHand struct {
+	Player *Player
+	Hand	int
+}
+
+func (game *Game) TexWin(tablename string, _ int) bool {
+	// This is called at end of a hand, with at least 2 players in.
+	// 1) Order still-in players by hand rank.
+	// 2) For each still-in player, in order from best to worst,
+	//    2a) Take their TotalBet chips from the rest's TotalBets.
+	//    2b) Any player w/ 0 chips left from TotalBets is busted out.
+	table := game.Public.Tables[tablename]
+	allhands := make([]PlayerHand, len(table.Seats))
+	idx := 0
+	for _, pid := range table.Seats {
+		player := game.Public.Players[pid]
+		allhands[idx].Player = player
+		if player.State == CALLED || player.State == ALLIN || player.State == BET {
+			allhands[idx].Hand = GetTexasRank(player.Hand, table.Cards["board"])
+		} else {
+			allhands[idx].Hand = 0
+		}
+		idx++
+	}
+	sort.Slice(allhands, func(i, j int) bool { return allhands[i].Hand < allhands[j].Hand })
+	// TODO: Ties. Ugh. Not gonna be fun.
+	return true
+}
+
 func (game *Game) FoldedWin(tablename string, _ int) bool {
 	// There should only be one active player when this is called.
 	// All others should be FOLDED
@@ -120,6 +149,7 @@ func (game *Game) ResetHand(tablename string, _ int) bool {
 	table.Pot = 0
 	for _, playerid := range table.Seats {
 		game.Public.Players[playerid].Bet = 0
+		game.Public.Players[playerid].TotalBet = 0
 		game.Public.Players[playerid].Hand = make([]string, 0)
 		game.Public.Players[playerid].State = WAITING
 		table.Cards = make(map[string][]string)
@@ -160,6 +190,7 @@ func DoCall(game *Game, tablename, playerid string, amt int) {
 	DoChoose(game, tablename, playerid, CALLED)
 	player.Chips -= amt
 	player.Bet += amt
+	player.TotalBet += amt
 	if player.Bet > table.CurBet {
 		fmt.Printf("How did player.Bet > table.CurBet in DoCall?")
 	}
@@ -188,7 +219,7 @@ func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
 		DoChoose(game, tablename, playerid, BET)
 	}
 	player.Chips -= amt
-	player.Bet += amt
+	player.TotalBet += amt
 	if amt > table.MinBet {
 		table.MinBet = amt
 	}

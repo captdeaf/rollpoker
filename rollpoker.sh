@@ -18,7 +18,7 @@ case "$1" in
     # And deploy gofuncs to gcloud functions
     ;;
   godeploy)
-    (cd gofuncs ; gcloud functions deploy $funcs --runtime go111 --trigger-http --allow-unauthenticated)
+    (cd gofuncs ; gcloud functions deploy $funcs --runtime go113 --trigger-http --allow-unauthenticated)
     ;;
   deploy)
     $0 webdeploy && $0 godeploy

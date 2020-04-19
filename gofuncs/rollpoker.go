@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"os"
 	"fmt"
+	"time"
+	"math/rand"
 	"context"
 	"log"
 	"strconv"
@@ -118,6 +120,8 @@ type GameCommand struct {
 var FIRESTORE_CLIENT *firestore.Client
 
 func init() {
+	// Seed the random number generator.
+	rand.Seed(time.Now().UnixNano())
 	ctx := context.Background()
 	var err error
 	_, err = os.Stat("firebase-key.json")

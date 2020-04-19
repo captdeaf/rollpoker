@@ -1,6 +1,6 @@
 module deafcode.com/rollpoker
 
-go 1.11
+go 1.13
 
 require (
 	cloud.google.com/go v0.56.0 // indirect
