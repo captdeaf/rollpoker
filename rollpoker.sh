@@ -9,6 +9,9 @@ case "$1" in
   gohost)
     (cd gofuncs ; go build -o gfhost host/main.go) && ./gofuncs/gfhost
     ;;
+  gotest)
+    (cd gofuncs ; go build -o gftest test/*.go) && ./gofuncs/gftest
+    ;;
   webhost)
     (firebase serve --only hosting)
     ;;
