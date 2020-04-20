@@ -35,9 +35,52 @@ var TableRenderer = {
       }
     });
     if (myp) {
-      $('#myhand').empty();
-      $('#myhand').append($(TableRenderer.HANDVIEW({player: myp})));
+      TableRenderer.UpdateHand(myp);
     }
+  },
+  LASTHAND: [],
+  IsSameHand: function(ary) {
+    if (ary.length != TableRenderer.LASTHAND.length) return false;
+    for (var i = 0; i < ary.length; i++) {
+      if (ary[i] != TableRenderer[i]) return false;
+    }
+    return true
+  },
+  UpdateHand: function(player) {
+    if (!TableRenderer.IsSameHand(player.Hand)) {
+      TableRenderer.LASTHAND = player.Hand;
+      $('#myhand').empty();
+      if (player.Hand.length > 0) {
+        $('#myhand').append($(TableRenderer.HANDVIEW({player: player})));
+        TableRenderer.SetDraggable($('#myhand'), function(el, data) {
+          console.log("Dropped:");
+          console.log(data);
+        });
+      }
+    }
+  },
+  SetDraggable: function(jqe, cb) {
+    function handle_mousedown(e){
+      var origX = e.pageX;
+      var origY = e.pageY;
+      var off = $(this).offset();
+      function handle_dragging(e){
+          jqe.offset({
+            left: off.left + (e.pageX - origX),
+            top: off.top + (e.pageY - origY),
+          });
+      }
+      function handle_mouseup(e){
+        $('body')
+        .off('mousemove', handle_dragging)
+        .off('mouseup', handle_mouseup);
+        cb(jqe, {x: e.pageX, y: e.pageY, xd: e.pageX - origX, yd: e.pageY - origY});
+      }
+      $('body')
+      .on('mouseup', handle_mouseup)
+      .on('mousemove', handle_dragging);
+    }
+    jqe.mousedown(handle_mousedown);
   },
   GetHand: function(str) {
     var ret = [];
@@ -49,9 +92,7 @@ var TableRenderer = {
         ret.push("bg");
       }
     } else {
-      for (var i = 0; i < str.length; i += 2) {
-        ret.push(str.substring(i,i+2));
-      }
+      return str.match(/(\w\w)/g);
     }
     return ret
   },
@@ -64,7 +105,6 @@ var TableRenderer = {
       for (var i = 0; i < bstr.length; i++) {
         ns = ns + String.fromCharCode(bstr.charCodeAt(i) ^ Poker.PLAYER_KEY.charCodeAt(i % Poker.PLAYER_KEY.length));
       }
-      console.log("My hand so far:" + ns);
       var m = ns.match(/m(\w+)m/);
       return m[1].match(/\w\w/g);
     }

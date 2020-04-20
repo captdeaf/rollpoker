@@ -18,6 +18,8 @@
   }
 
   div.myhand {
+    display: inline-block;
+    padding: 5px;
     background-color: lightgreen;
     transform: scale(2.0);
     transform-origin: 0 0;
