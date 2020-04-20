@@ -16,6 +16,15 @@ var TableRenderer = {
       console.log(me.attr('name'), dat);
       Poker.SendCommand(me.attr('name'), dat);
     });
+    TableRenderer.SetDraggable($('#myhand'), {vert: true}, function(el, data) {
+      console.log("Dropped:");
+      console.log(data);
+      if (data.yd < -150) {
+        // Swiped the cards up. Fold.
+        Poker.SendCommand("Fold", {});
+      } else {
+      }
+    });
   },
   CHIP_VALS: "",
   Update: function(data) {
@@ -52,31 +61,36 @@ var TableRenderer = {
       $('#myhand').empty();
       if (player.Hand.length > 0) {
         $('#myhand').append($(TableRenderer.HANDVIEW({player: player})));
-        TableRenderer.SetDraggable($('#myhand'), function(el, data) {
-          console.log("Dropped:");
-          console.log(data);
-        });
       }
     }
   },
-  SetDraggable: function(jqe, cb) {
+  SetDraggable: function(jqe, opts, cb) {
     function handle_mousedown(e){
+      if (window.dragging != undefined) return;
+      window.dragging = true;
       var origX = e.pageX;
       var origY = e.pageY;
-      var off = $(this).offset();
+      var off = jqe.offset();
       function handle_dragging(e){
-          jqe.offset({
-            left: off.left + (e.pageX - origX),
-            top: off.top + (e.pageY - origY),
-          });
+        var newoff = {
+          left: off.left,
+          top: off.top,
+        }
+        if (opts.horiz) newoff.left += (e.pageX - origX);
+        if (opts.vert) newoff.top += (e.pageY - origY);
+        jqe.offset(newoff);
       }
       function handle_mouseup(e){
         $('body')
         .off('mousemove', handle_dragging)
-        .off('mouseup', handle_mouseup);
+        .off('mouseup', handle_mouseup)
+        .off('mouseleave', handle_mouseup);
+        jqe.offset(off);
         cb(jqe, {x: e.pageX, y: e.pageY, xd: e.pageX - origX, yd: e.pageY - origY});
+        window.dragging = undefined;
       }
       $('body')
+      .on('mouseleave', handle_mouseup)
       .on('mouseup', handle_mouseup)
       .on('mousemove', handle_dragging);
     }

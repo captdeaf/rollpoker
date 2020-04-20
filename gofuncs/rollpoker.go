@@ -91,6 +91,7 @@ const (
 	BET = "BET"		// Bet or raised
 	CALLED = "CALLED"	// All players but one must be CALLED (or ALLIN)
 	ALLIN = "ALLIN"		// Has no more chips left.
+	WON = "WON"		// Won the hand
 )
 
 const (

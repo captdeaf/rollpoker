@@ -68,6 +68,7 @@ func (game *Game) TexRiver(tablename string, _ int) bool {
 func (game *Game) NewGame(tablename string, count int) bool {
 	table := game.Public.Tables[tablename]
 	table.Dolist = make(GameDef, len(GAME_COMMANDS["texasholdem"]))
+	table.Dealer = GetNextPlayer(game, table, table.Dealer)
 	copy(table.Dolist, GAME_COMMANDS["texasholdem"])
 	return true
 }
@@ -173,8 +174,9 @@ func (game *Game) FoldedWin(tablename string, _ int) bool {
 	for _, playerid := range table.Seats {
 		player := game.Public.Players[playerid]
 
-		if player.State == WAITING || player.State == BET || player.State == CALLED {
+		if player.State == ALLIN || player.State == WAITING || player.State == BET || player.State == CALLED {
 			active = append(active, player)
+			player.State = WON
 		}
 	}
 	if len(active) != 1 {
@@ -183,6 +185,7 @@ func (game *Game) FoldedWin(tablename string, _ int) bool {
 	}
 	player := active[0]
 	player.Chips += table.Pot
+	player.State = WON
 	table.Pot = 0
 	return true
 }
@@ -221,6 +224,8 @@ func DoChoose(game *Game, tablename, playerid, state string) {
 }
 
 func DoFold(game *Game, tablename, playerid string) {
+	player := game.Public.Players[playerid]
+	player.Hand = ""
 	DoChoose(game, tablename, playerid, FOLDED)
 }
 
@@ -262,6 +267,7 @@ func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
 		DoChoose(game, tablename, playerid, BET)
 	}
 	player.Chips -= amt
+	player.Bet += amt
 	player.TotalBet += amt
 	if amt > table.MinBet {
 		table.MinBet = amt
@@ -489,7 +495,7 @@ func RunCommandsTransaction(gamename string, tablename string) time.Duration {
 
 		SaveGame(game, tx)
 		return nil
-	});
+	})
 	if err != nil {
 		fmt.Printf("ERROR in Transaction: %v\n", err)
 	}
