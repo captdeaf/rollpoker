@@ -29,7 +29,7 @@ func (player *Player) TryStartGame(game *Game, gc *GameCommand) int {
 		player.Bet = 0
 		player.Rank = 0
 		player.State = ""
-		player.Hand = []string{}
+		player.Hand = ""
 	}
 	if len(allPlayers) > 10 {
 		// TODO: Multiple tables

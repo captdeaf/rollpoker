@@ -3,6 +3,7 @@ var TableRenderer = {
   Templates: {
     TABLE: "#maintable",
     VIEW: "#tableview",
+    HANDVIEW: "#myhandview",
   },
   Start: function() {
     $('body').html(TableRenderer.VIEW());
@@ -27,6 +28,51 @@ var TableRenderer = {
     var table = $(TableRenderer.TABLE({table:tableData, players: data.Players}));
     $('#tables').empty();
     $('#tables').append(table);
+    var myp;
+    _.each(data.Players, function(p) {
+      if (p.PlayerId == Poker.PLAYER_ID) {
+        myp = p;
+      }
+    });
+    if (myp) {
+      $('#myhand').empty();
+      $('#myhand').append($(TableRenderer.HANDVIEW({player: myp})));
+    }
+  },
+  GetHand: function(str) {
+    var ret = [];
+    if (str.startsWith("!")) {
+      str = atob(str.substring(1,str.length))
+      // Figure out how many cards. There's 38 chars in encryption
+      // !, a-z0-9, an extra m, then the cards (2 chars each)
+      for (var i = 38; i < str.length; i += 2) {
+        ret.push("bg");
+      }
+    } else {
+      for (var i = 0; i < str.length; i += 2) {
+        ret.push(str.substring(i,i+2));
+      }
+    }
+    return ret
+  },
+  DecryptMyHand: function(str) {
+    var ret = [];
+    if (str.startsWith("!")) {
+      var ns = "";
+      var bstr = atob(str.substring(1,str.length));
+      // Decrypt: De-XOR it, then pluck the string out from m.*m
+      for (var i = 0; i < bstr.length; i++) {
+        ns = ns + String.fromCharCode(bstr.charCodeAt(i) ^ Poker.PLAYER_KEY.charCodeAt(i % Poker.PLAYER_KEY.length));
+      }
+      console.log("My hand so far:" + ns);
+      var m = ns.match(/m(\w+)m/);
+      return m[1].match(/\w\w/g);
+    }
+
+    for (var i = 0; i < str.length; i += 2) {
+      ret.push(str.substring(i,i+2));
+    }
+    return ret;
   },
   Setup: function() {
     for (var key in TableRenderer.Templates) {
@@ -61,12 +107,12 @@ var TableRenderer = {
       document.getElementsByTagName('head')[0].appendChild(style);
     }
 
-    makeChip(0, 0, "ca");
-    makeChip(1, 0, "cb");
-    makeChip(2, 0, "cc");
-    makeChip(3, 0, "cd");
-    makeChip(4, 0, "ce");
-    makeChip(5, 0, "cf");
+    makeChip(0, 0, "za");
+    makeChip(1, 0, "zb");
+    makeChip(2, 0, "zc");
+    makeChip(3, 0, "zd");
+    makeChip(4, 0, "ze");
+    makeChip(5, 0, "zf");
   },
 
 
@@ -75,7 +121,7 @@ var TableRenderer = {
   UpdateChips: function(str) {
     TableRenderer.CHIP_VALUES = [];
     // Accepts "25 100 500 ..." etc.
-    var colors = ["ca", "cb", "cc", "cd", "ce", "cf"];
+    var colors = ["za", "zb", "zc", "zd", "ze", "zf"];
     var values = str.split(" ");
     for (var i = 0; i < values.length; i++) {
       var num = parseInt(values[i], 10);

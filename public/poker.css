@@ -17,13 +17,19 @@
     transform-origin: 0 0;
   }
 
+  div.myhand {
+    background-color: lightgreen;
+    transform: scale(2.0);
+    transform-origin: 0 0;
+  }
+
   div.board {
     display: block;
     height: 80px;
   }
 
   div.bg {
-    background-image: url('/cardbg.png');
+    background-image: url('/cardback1.png');
     background-size: 60px 80px;
     background-repeat: repeat;
     width: 60px;

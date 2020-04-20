@@ -84,7 +84,9 @@ func (game *Game) DealAllDown(tablename string, count int) bool {
 	for i := 0; i < count; i++ {
 		for _, seat := range order {
 			player := game.Public.Players[table.Seats[seat]]
-			player.Hand = append(player.Hand, deck[idx])
+			pkey := game.Private.PlayerKeys[player.PlayerId]
+			h := DecryptHand(player.Hand, pkey)
+			player.Hand = EncryptHand(h + deck[idx], pkey)
 			idx += 1
 		}
 	}
@@ -93,9 +95,49 @@ func (game *Game) DealAllDown(tablename string, count int) bool {
 	return true
 }
 
+type Pot struct {
+	Players		[]*Player
+	BetAmount	int
+	Chips		int
+	WinningHand	int
+	Winners		[]*Player
+}
+
 type PlayerHand struct {
-	Player *Player
+	Player	*Player
 	Hand	int
+}
+
+func MakePots(game *Game, table *TableState) []Pot {
+	stillins := make([]*Player, 0)
+	seenpots := make(map[int]bool)
+	for _, pid := range table.Seats {
+		player := game.Public.Players[pid]
+		if player.State == CALLED || player.State == ALLIN || player.State == BET {
+			stillins = append(stillins, player)
+			seenpots[player.TotalBet] = true
+		}
+	}
+	pots, idx := make([]Pot, len(seenpots)), 0
+	for amt, _ := range seenpots { pots[idx].BetAmount = amt; idx++ }
+
+	taken := 0
+	sort.Slice(pots, func(i, j int) bool { return pots[i].BetAmount < pots[j].BetAmount })
+	for idx = 0; idx < len(pots); idx++ {
+		for _, pid := range table.Seats {
+			player := game.Public.Players[pid]
+			if player.TotalBet > taken {
+				pots[idx].Chips += (player.TotalBet - taken)
+
+				if player.State == CALLED || player.State == ALLIN || player.State == BET {
+					pots[idx].Players = append(pots[idx].Players, player)
+				}
+			}
+		}
+		taken = pots[idx].BetAmount
+	}
+	fmt.Println(pots)
+	return pots
 }
 
 func (game *Game) TexWin(tablename string, _ int) bool {
@@ -110,8 +152,9 @@ func (game *Game) TexWin(tablename string, _ int) bool {
 	for _, pid := range table.Seats {
 		player := game.Public.Players[pid]
 		allhands[idx].Player = player
+		hand := GetHandVals(game, player)
 		if player.State == CALLED || player.State == ALLIN || player.State == BET {
-			allhands[idx].Hand = GetTexasRank(player.Hand, table.Cards["board"])
+			allhands[idx].Hand = GetTexasRank(hand, table.Cards["board"])
 		} else {
 			allhands[idx].Hand = 0
 		}
@@ -150,7 +193,7 @@ func (game *Game) ResetHand(tablename string, _ int) bool {
 	for _, playerid := range table.Seats {
 		game.Public.Players[playerid].Bet = 0
 		game.Public.Players[playerid].TotalBet = 0
-		game.Public.Players[playerid].Hand = make([]string, 0)
+		game.Public.Players[playerid].Hand = ""
 		game.Public.Players[playerid].State = WAITING
 		table.Cards = make(map[string][]string)
 	}
@@ -428,7 +471,7 @@ func RunCommandsTransaction(gamename string, tablename string) time.Duration {
 	//   6) Returns a duration to sleep for.
 	var ret time.Duration
 	ret = -1
-	FIRESTORE_CLIENT.RunTransaction(context.Background(),
+	err := FIRESTORE_CLIENT.RunTransaction(context.Background(),
 					func(ctx context.Context, tx *firestore.Transaction) error {
 
 		game := FetchGame(gamename, tx)
@@ -447,6 +490,9 @@ func RunCommandsTransaction(gamename string, tablename string) time.Duration {
 		SaveGame(game, tx)
 		return nil
 	});
+	if err != nil {
+		fmt.Printf("ERROR in Transaction: %v\n", err)
+	}
 	return ret
 }
 

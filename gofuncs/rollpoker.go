@@ -45,7 +45,7 @@ type Player struct {
 	Bet		int		// Current amount bet // inside the circle
 	TotalBet	int		// Running total
 	State		string		// "Waiting" "Folded" etc
-	Hand		[]string	// "ha sa"
+	Hand		string		// "hasa" - decrypted, or "!<string>" encrypted
 }
 
 type TableState struct {
@@ -140,10 +140,6 @@ func init() {
 
 type GameResponse struct {
 	Name string
-}
-
-func GenerateNewName() string {
-	return "OrangePanda"
 }
 
 func MakeTable(w http.ResponseWriter, r *http.Request) {
