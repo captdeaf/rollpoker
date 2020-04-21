@@ -113,12 +113,15 @@ var Table = {
     }
     return true
   },
-  MINBET: 33,
-  CURBET: 33,
+  MINBET: -1,
+  CURBET: -1,
+  PLYBET: -1,
   UpdateBetPlaque: function(tableData, player, val) {
-    if (Table.MINBET != tableData.MinBet) {
+    if (Table.MINBET != tableData.MinBet || Table.CURBET != tableData.CurBet ||
+        Player.Bet != Table.PLYBET) {
       Table.MINBET = tableData.MinBet;
       Table.CURBET = tableData.CurBet;
+      Table.PLYBET = player.Bet;
       $('button[name="betcall"]').text("= " + (Table.CURBET - player.Bet) + " (Call)");
       $('button[name="betadd"]').text("+ " + Table.MINBET);
       $('button[name="betsub"]').text("- " + Table.MINBET);
