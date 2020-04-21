@@ -100,13 +100,14 @@ type Pot struct {
 	Players		[]*Player
 	BetAmount	int
 	Chips		int
-	WinningHand	int
+	WinningScore	int
 	Winners		[]*Player
 }
 
 type PlayerHand struct {
 	Player	*Player
-	Hand	int
+	Hand	string
+	Score	int
 }
 
 func MakePots(game *Game, table *TableState) []Pot {
@@ -119,9 +120,11 @@ func MakePots(game *Game, table *TableState) []Pot {
 			seenpots[player.TotalBet] = true
 		}
 	}
+	fmt.Printf("# of seenpots: %d\n", len(seenpots))
 	pots, idx := make([]Pot, len(seenpots)), 0
 	for amt, _ := range seenpots { pots[idx].BetAmount = amt; idx++ }
 
+	fmt.Printf("# of pots: %d\n", len(pots))
 	taken := 0
 	sort.Slice(pots, func(i, j int) bool { return pots[i].BetAmount < pots[j].BetAmount })
 	for idx = 0; idx < len(pots); idx++ {
@@ -137,8 +140,59 @@ func MakePots(game *Game, table *TableState) []Pot {
 		}
 		taken = pots[idx].BetAmount
 	}
+	fmt.Println("Pots:")
 	fmt.Println(pots)
 	return pots
+}
+
+func PayoutPots(pots []Pot, hands []PlayerHand) {
+	// Sort in reverse, so greatest first
+	sort.Slice(hands, func(i, j int) bool { return hands[i].Hand > hands[j].Hand })
+	// Map PlayerId to Hands
+	idScore := make(map[string]PlayerHand)
+	for _, hand := range hands { idScore[hand.Player.PlayerId] = hand }
+	fmt.Println("Payout # of idscores: %v\n", len(idScore))
+
+	// Find winning hand for each pot
+	for i, _ := range pots {
+		pots[i].WinningScore = 0
+		for _, player := range pots[i].Players {
+			if idScore[player.PlayerId].Score > pots[i].WinningScore {
+				pots[i].WinningScore = idScore[player.PlayerId].Score
+			}
+		}
+	}
+	fmt.Println("Pots w/ winning scores")
+	fmt.Println(pots)
+
+	// Find winning players for each pot
+	for i, _ := range pots {
+		pots[i].Winners = make([]*Player, 0)
+		for _, player := range pots[i].Players {
+			if idScore[player.PlayerId].Score == pots[i].WinningScore {
+				pots[i].Winners = append(pots[i].Winners, player)
+			}
+		}
+	}
+
+	// Pay out each pot
+	for i, _ := range pots {
+		DivvyPot(pots[i])
+	}
+}
+
+func DivvyPot(pot Pot) {
+	// pot.Winners contains the players that won.
+	// pot.Chips contains how many chips to give out.
+	fmt.Println("Pot to pay out:")
+	fmt.Println(pot)
+	if len(pot.Winners) == 1 {
+		// Simple! Yaaaay!
+		pot.Winners[0].Chips += pot.Chips
+		return
+	}
+	// TODO: Divvy up ties
+	pot.Winners[0].Chips += pot.Chips
 }
 
 func (game *Game) TexWin(tablename string, _ int) bool {
@@ -148,21 +202,26 @@ func (game *Game) TexWin(tablename string, _ int) bool {
 	//    2a) Take their TotalBet chips from the rest's TotalBets.
 	//    2b) Any player w/ 0 chips left from TotalBets is busted out.
 	table := game.Public.Tables[tablename]
+	pots := MakePots(game, table)
 	allhands := make([]PlayerHand, len(table.Seats))
 	idx := 0
+
+	// Determine winners, and set their State to what they had.
 	for _, pid := range table.Seats {
 		player := game.Public.Players[pid]
 		allhands[idx].Player = player
 		hand := GetHandVals(game, player)
 		if player.State == CALLED || player.State == ALLIN || player.State == BET {
-			allhands[idx].Hand = GetTexasRank(hand, table.Cards["board"])
+			allhands[idx].Hand, allhands[idx].Score = GetTexasRank(hand, table.Cards["board"])
+			player.State = allhands[idx].Hand // Four of a kind, Set, etc.
 		} else {
-			allhands[idx].Hand = 0
+			allhands[idx].Hand = ""
+			allhands[idx].Score = 0
 		}
 		idx++
 	}
-	sort.Slice(allhands, func(i, j int) bool { return allhands[i].Hand < allhands[j].Hand })
-	// TODO: Ties. Ugh. Not gonna be fun.
+
+	PayoutPots(pots, allhands)
 	return true
 }
 
@@ -542,7 +601,7 @@ func init() {
 		{"ClearBets", 0, 0},
 		{"BetRound", 0, 1},
 		{"CollectPot", 0, 0},
-		{"Texwin", 0, 7},
+		{"TexWin", 0, 7},
 		{"NewGame", 0, 0},
 	}
 	GAME_COMMANDS["_foldedwin"] = GameDef {

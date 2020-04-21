@@ -8,6 +8,10 @@ import (
 	"strconv"
 )
 
+func (player *Player) TryKick(game *Game, gc *GameCommand) int {
+	return SAVE|RUN
+}
+
 func (player *Player) TryStartGame(game *Game, gc *GameCommand) int {
 	// Sanity checks:
 	if game.Public.State != NOGAME { return ERR }

@@ -28,7 +28,7 @@ var Poker = {
       Poker.PLAYER_KEY = m[2];
       Poker.SetPlayerCookie("playerid", Poker.PLAYER_ID);
       Poker.SetPlayerCookie("playerkey", Poker.PLAYER_KEY);
-      document.location.search = "";
+      // document.location.search = "";
     }
     if (!Poker.PLAYER_ID) {
       Poker.PLAYER_ID = Poker.GetPlayerId();

@@ -341,13 +341,13 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// TODO: DELETE THIS BEFORE PUSHING.
 			// It's just here for testing
-			for pid, tplayer := range game.Public.Players {
-				if tplayer.State == TURN {
-					gc.PlayerId = pid
-					player = tplayer
-					break
-				}
-			}
+			// for pid, tplayer := range game.Public.Players {
+				// if tplayer.State == TURN {
+					// gc.PlayerId = pid
+					// player = tplayer
+					// break
+				// }
+			// }
 			if player == nil {
 				// If PlayerId is nil, the only thing the player can do is "register" / invite.
 				http.Error(w, "You are not a player", http.StatusBadRequest)

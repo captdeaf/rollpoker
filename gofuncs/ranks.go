@@ -72,7 +72,7 @@ func StrToCard(scard string) *Card {
 	return &card
 }
 
-func GetTexasRank(hand, board []string) int {
+func GetTexasRank(hand, board []string) (string, int) {
 	allcards := make([]*Card,len(hand) + len(board))
 	i := 0
 	for _, c := range hand {
@@ -83,26 +83,22 @@ func GetTexasRank(hand, board []string) int {
 		allcards[i] = StrToCard(c)
 		i++
 	}
-	// Sort allcards by high->low Val
-	sort.Slice(allcards, func(i,j int) bool {
-		// i.Val < j.Val sorts low->high
-		return allcards[j].Val < allcards[i].Val
-	})
 	best := 0
+	bestname := ""
 	EachCombination(allcards, 5, func(cards []*Card) {
-		val := GetHandVal(cards)
-		if val > best { best = val }
+		name, val := GetHandVal(cards)
+		if val > best { best = val; bestname = name }
 	})
-	return best
+	return bestname, best
 }
 
-func GetHandVal(cards []*Card) int {
-	hex := GetHandValS(cards)
+func GetHandVal(cards []*Card) (string, int) {
+	name, hex := GetHandValS(cards)
 	ival, _ := strconv.ParseInt(hex, 16, 32)
-	return int(ival)
+	return name, int(ival)
 }
 
-func GetHandValS(cards []*Card) string {
+func GetHandValS(cards []*Card) (string, string) {
 	l := len(cards) // Rather than use 5 everywhere
 	hexval := ""
 	hasFlush := true
@@ -135,25 +131,25 @@ func GetHandValS(cards []*Card) string {
 		hexval = hexval + strconv.FormatInt(int64(cards[i].Val), 16)
 	}
 
-	if hasStraight && hasFlush { return STRAIGHTFLUSH + hexval }
+	if hasStraight && hasFlush { return "Straight Flush", STRAIGHTFLUSH + hexval }
 
-	if hasFlush { return FLUSH + hexval }
-	if hasStraight { return STRAIGHT + hexval }
-	if cards[0].Val == cards[3].Val { return FOUROFAKIND + hexval }
+	if hasFlush { return "FLUSH", FLUSH + hexval }
+	if hasStraight { return "STRAIGHT", STRAIGHT + hexval }
+	if cards[0].Val == cards[3].Val { return "FOUR OF A KIND", FOUROFAKIND + hexval }
 
 	// Full House?
 	if cards[0].Val == cards[2].Val && cards[3].Val == cards[4].Val {
-		return FULLHOUSE + hexval
+		return "FULL HOUSE", FULLHOUSE + hexval
 	}
 
 	// Set of 3?
 	if cards[0].Val == cards[2].Val {
-		return SET + hexval
+		return "SET", SET + hexval
 	}
 	// 2 Pair?
-	if cards[2].Val == cards[3].Val { return TWOPAIR + hexval }
+	if cards[2].Val == cards[3].Val { return "TWO PAIR", TWOPAIR + hexval }
 	// Pair?
-	if cards[0].Val == cards[1].Val { return PAIR + hexval }
+	if cards[0].Val == cards[1].Val { return "PAIR", PAIR + hexval }
 
-	return HIGHCARD + hexval
+	return "HIGH CARD", HIGHCARD + hexval
 }
