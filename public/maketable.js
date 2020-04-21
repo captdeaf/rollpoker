@@ -12,6 +12,7 @@ $(document).ready(function() {
       data: JSON.stringify(data),
       success: function(result) {
         console.log(result);
+        document.location = "/table/" + result.Name;
       },
       error: function(xhr, resp, text) {
         console.log(xhr, resp, text);

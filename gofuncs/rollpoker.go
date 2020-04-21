@@ -177,7 +177,7 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 		settings.BlindTimes[i] = int(t64)
 	}
 
-	newgame.Name = "OrangePanda" // GenerateName()
+	newgame.Name = GenerateName()
 	newgame.Private.PlayerKeys = make(map[string]string)
 	newgame.Private.TableDecks = make(map[string][]string)
 	newgame.Private.AdminPassword = args["AdminPassword"]
@@ -282,19 +282,22 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 	subject := "RollPoker for " + gc.Args["DisplayName"]
 	to := mail.NewEmail(gc.Args["DisplayName"], gc.Args["Email"])
 
-	link := "http://localhost/table/" + gc.Name + "?id=" + player.PlayerId + "&key=" + playerKey
+	base_uri := "https://rollpoker.web.app"
+	// base_uri := "http://localhost"
+	link := base_uri + gc.Name + "?id=" + player.PlayerId + "&key=" + playerKey
 
 	plainTextContent := "You have been invited to join a poker game: " + link
 	htmlContent := "<a href=\"" + link + "\">Click here to join the poker game</a>"
 	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
 	sgclient := sendgrid.NewSendClient(SENDGRID_API_KEY)
-	if false {
+	if true {
 		_, err := sgclient.Send(message)
 		if err != nil {
 			return false
 		}
+	} else {
+		fmt.Println(link)
 	}
-	fmt.Println(link)
 	if game.Public.Players == nil {
 		game.Public.Players = make(map[string]*Player)
 	}
@@ -310,7 +313,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&gc)
 
 	if err != nil {
-		gc.Name = "OrangePanda"
+		return
 	}
 	gc.ErrorMessage = ""
 
