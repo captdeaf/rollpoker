@@ -284,7 +284,7 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 
 	base_uri := "https://rollpoker.web.app"
 	// base_uri := "http://localhost"
-	link := base_uri + gc.Name + "?id=" + player.PlayerId + "&key=" + playerKey
+	link := base_uri + "/table/" +  gc.Name + "?id=" + player.PlayerId + "&key=" + playerKey
 
 	plainTextContent := "You have been invited to join a poker game: " + link
 	htmlContent := "<a href=\"" + link + "\">Click here to join the poker game</a>"
