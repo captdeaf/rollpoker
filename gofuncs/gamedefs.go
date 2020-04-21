@@ -191,8 +191,17 @@ func DivvyPot(pot Pot) {
 		pot.Winners[0].Chips += pot.Chips
 		return
 	}
-	// TODO: Divvy up ties
-	pot.Winners[0].Chips += pot.Chips
+
+	// Crap. We have ties
+	chipCount := int(pot.Chips / len(pot.Winners))
+
+	// TODO: Do we care about chips?
+	total := 0
+	for _, winner := range pot.Winners {
+		winner.Chips += chipCount
+		total += chipCount
+	}
+	pot.Winners[0].Chips += pot.Chips - total
 }
 
 func (game *Game) TexWin(tablename string, _ int) bool {
