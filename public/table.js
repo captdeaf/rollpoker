@@ -1,12 +1,13 @@
 // Initialize sprites/etc:
-var TableRenderer = {
+var Table = {
   Templates: {
     TABLE: "#maintable",
     VIEW: "#tableview",
     HANDVIEW: "#myhandview",
+    BETVIEW: "#betplaqueview",
   },
-  Start: function() {
-    $('body').html(TableRenderer.VIEW());
+  Start: function(doc) {
+    $('body').html(Table.VIEW());
     $('.gamecommand').click(function(evt) {
       var me = $(this);
       var dat = me.data();
@@ -16,52 +17,122 @@ var TableRenderer = {
       console.log(me.attr('name'), dat);
       Poker.SendCommand(me.attr('name'), dat);
     });
-    TableRenderer.SetDraggable($('#myhand'), {vert: true}, function(el, data) {
-      console.log("Dropped:");
-      console.log(data);
-      if (data.yd < -150) {
-        // Swiped the cards up. Fold.
-        Poker.SendCommand("Fold", {});
-      } else {
-      }
-    });
+    if (Poker.PLAYER) {
+      var lastDrop = 0;
+      Table.SetDraggable($('#myhand'), {vert: true}, function(el, data) {
+        console.log("Dropped:");
+        console.log(data);
+        if (data.yd < -150) {
+          // Swiped the cards up. Fold.
+          Poker.SendCommand("Fold", {});
+        } else if ((Date.now() - lastDrop) < 1500) {
+          Poker.SendCommand("Check", {});
+        } else {
+          lastDrop = Date.now();
+        }
+      });
+      var bp = $('#betplaque');
+      bp.empty();
+      bp.append($(Table.BETVIEW({player: Poker.PLAYER})));
+      Table.SetDraggable($('#betplaque'), {vert: true}, function(el, data) {
+        if (data.yd < -150) {
+          console.log("Trying to bet");
+          // Swiped the bet up to table area. Call, Bet or Raise.
+          // Force string of int.
+          var bet = "" + parseInt(inp.val());
+          Poker.SendCommand("Bet", {amount: bet});
+        }
+      });
+      var inp = bp.find('input.betp');
+      var chipv = bp.find('.betchips');
+      var tt = bp.find('.betdesc');
+      inp.change(function(val) {
+        console.log("Huh?");
+        
+        var min = Table.CURBET - Poker.PLAYER.Bet;
+        inp.val(parseInt(inp.val()));
+        if (inp.val() < min) {
+          inp.val(min);
+        }
+        if (inp.val() > Poker.PLAYER.Chips) {
+          inp.val(Poker.PLAYER.Chips);
+        }
+        if (inp.val() == min && Table.CURBET != 0) {
+            tt.text("Call");
+        }
+        chipv.html(Table.ChipStack(inp.val(), "bigpiles"));
+        if (inp.val() > (Table.CURBET - Poker.PLAYER.Bet)) {
+          if (Table.CURBET == 0) {
+            tt.text("Bet " + inp.val());
+          } else {
+            tt.text("Raise " + (inp.val() - Table.CURBET));
+          }
+        }
+        if (Poker.PLAYER.Chips == inp.val()) {
+          tt.text("All-In");
+        }
+      });
+      bp.find('button[name="betcall"]').click(function() {
+        inp.val(Table.CURBET - Poker.PLAYER.Bet);
+        inp.trigger("change");
+      });
+      bp.find('button[name="betadd"]').click(function() {
+        inp.val(parseInt(inp.val()) + Table.MINBET);
+        inp.trigger("change");
+      });
+      bp.find('button[name="betsub"]').click(function() {
+        inp.val(parseInt(inp.val()) - Table.MINBET);
+        inp.trigger("change");
+      });
+    }
   },
   CHIP_VALS: "",
   Update: function(data) {
-    if (data.GameSettings.ChipValues != TableRenderer.CHIP_VALS) {
-      TableRenderer.UpdateChips(data.GameSettings.ChipValues);
-      TableRenderer.CHIP_VALS = data.GameSettings.ChipValues;
+    if (data.GameSettings.ChipValues != Table.CHIP_VALS) {
+      Table.UpdateChips(data.GameSettings.ChipValues);
+      Table.CHIP_VALS = data.GameSettings.ChipValues;
     }
     // TODO: Pick my table out from multiple tables.
     var tableData = data.Tables["table0"];
-    var table = $(TableRenderer.TABLE({table:tableData, players: data.Players}));
+    var table = $(Table.TABLE({table:tableData, players: data.Players}));
     $('#tables').empty();
     $('#tables').append(table);
-    var myp;
-    _.each(data.Players, function(p) {
-      if (p.PlayerId == Poker.PLAYER_ID) {
-        myp = p;
+    if (Poker.PLAYER) {
+      if (!Table.IsSameHand(Poker.PLAYER.Hand, Table.LASTHAND)) {
+        Table.LASTHAND = Poker.PLAYER.Hand;
+        Table.UpdateHand(Poker.PLAYER);
       }
-    });
-    if (myp) {
-      TableRenderer.UpdateHand(myp);
+      Table.UpdateBetPlaque(tableData,Poker.PLAYER);
     }
   },
   LASTHAND: [],
-  IsSameHand: function(ary) {
-    if (ary.length != TableRenderer.LASTHAND.length) return false;
+  IsSameHand: function(ary, ary2) {
+    if (ary.length != ary2) return false;
     for (var i = 0; i < ary.length; i++) {
-      if (ary[i] != TableRenderer[i]) return false;
+      if (ary[i] != ary2) return false;
     }
     return true
   },
+  MINBET: 33,
+  CURBET: 33,
+  UpdateBetPlaque: function(tableData, player, val) {
+    if (Table.MINBET != tableData.MinBet) {
+      Table.MINBET = tableData.MinBet;
+      Table.CURBET = tableData.CurBet;
+      $('button[name="betcall"]').text("= " + (Table.CURBET - player.Bet) + " (Call)");
+      $('button[name="betadd"]').text("+ " + Table.MINBET);
+      $('button[name="betsub"]').text("- " + Table.MINBET);
+      var inp = $('input.betp');
+      inp.val(tableData.CurBet - Poker.PLAYER.Bet);
+      var callbutt = $('button[name="betcall"]');
+      callbutt.text((tableData.CurBet - Poker.PLAYER.Bet) + " (call)");
+      inp.trigger("change");
+    }
+  },
   UpdateHand: function(player) {
-    if (!TableRenderer.IsSameHand(player.Hand)) {
-      TableRenderer.LASTHAND = player.Hand;
-      $('#myhand').empty();
-      if (player.Hand.length > 0) {
-        $('#myhand').append($(TableRenderer.HANDVIEW({player: player})));
-      }
+    $('#myhand').empty();
+    if (player.Hand.length > 0) {
+      $('#myhand').append($(Table.HANDVIEW({player: player})));
     }
   },
   SetDraggable: function(jqe, opts, cb) {
@@ -129,8 +200,8 @@ var TableRenderer = {
     return ret;
   },
   Setup: function() {
-    for (var key in TableRenderer.Templates) {
-      TableRenderer[key] = _.template($(TableRenderer.Templates[key]).html());
+    for (var key in Table.Templates) {
+      Table[key] = _.template($(Table.Templates[key]).html());
     }
 
     function makeCard(x,y,cardname) {
@@ -173,28 +244,26 @@ var TableRenderer = {
   CHIP_VALUES: [],
 
   UpdateChips: function(str) {
-    TableRenderer.CHIP_VALUES = [];
+    Table.CHIP_VALUES = [];
     // Accepts "25 100 500 ..." etc.
     var colors = ["za", "zb", "zc", "zd", "ze", "zf"];
     var values = str.split(" ");
     for (var i = 0; i < values.length; i++) {
       var num = parseInt(values[i], 10);
       if (num != NaN && num > 0) {
-        TableRenderer.CHIP_VALUES.push([num, colors[i]]);
+        Table.CHIP_VALUES.push([num, colors[i]]);
       }
     }
-    TableRenderer.CHIP_VALUES.sort(function(a,b) { return a[0] - b[0]; });
+    Table.CHIP_VALUES.sort(function(a,b) { return a[0] - b[0]; });
   },
 
-  ChipStack: function(amt) {
-    console.log("Generating chip stack for");
-    console.log(amt);
-    var piles = $('<div class="smallpiles">');
-    for (var i = 0; amt > 0 && i < TableRenderer.CHIP_VALUES.length; i++) {
-      console.log("uh");
+  ChipStack: function(amt, cls) {
+    if (!cls) { cls = "smallpiles"; }
+    var piles = $('<div class="' + cls + '">');
+    for (var i = 0; amt > 0 && i < Table.CHIP_VALUES.length; i++) {
       var pile = $('<ul class="pile">');
-      var max = TableRenderer.CHIP_VALUES[i][0] * 20;
-      var half = TableRenderer.CHIP_VALUES[i][0] * 10;
+      var max = Table.CHIP_VALUES[i][0] * 20;
+      var half = Table.CHIP_VALUES[i][0] * 10;
       var numval = amt % max;
       if (numval === 0) {
         numval = max;
@@ -202,12 +271,13 @@ var TableRenderer = {
         numval += half;
       }
       amt = amt - numval;
-      for (var j = 0; j < numval; j = j + TableRenderer.CHIP_VALUES[i][0]) {
+      for (var j = 0; j < numval; j = j + Table.CHIP_VALUES[i][0]) {
         var li = $('<li>');
-        li.append($('<div class="chip ' + TableRenderer.CHIP_VALUES[i][1] + '">'));
+        li.append($('<div class="chip ' + Table.CHIP_VALUES[i][1] + '">'));
         pile.append(li);
       }
-      piles.prepend(pile);
+
+      piles.prepend($('<div class="pilecontainer">').append(pile));
     }
     return piles.wrapAll('<div>').parent().html();
   },

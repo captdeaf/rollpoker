@@ -128,21 +128,49 @@ func (player *Player) TryCall(game *Game, gc *GameCommand) int {
 }
 
 func (player *Player) TryBet(game *Game, gc *GameCommand) int {
-	// This is a call PLUS bet, as TryBet is used for both betting
-	// and raising
+	// This can be a Check, a Call, a Bet, or a Raise, depending on amount.
 	if player.State != TURN { return ERR }
 	tablename := game.TableForPlayer(player)
 	table := game.Public.Tables[tablename]
-	i64bet, _ := strconv.ParseInt(gc.Args["amount"], 10, 32)
+	i64bet, ierr := strconv.ParseInt(gc.Args["amount"], 10, 32)
 	ibet := int(i64bet)
 
-	// A raise.
-	actualbet := ibet + (table.CurBet - player.Bet)
-	if actualbet > player.Chips { return ERR }
+	fmt.Printf("ibet: %d\n", ibet)
+	if ierr != nil || ibet < 0 { return ERR }
+	fmt.Printf("ibet good\n")
 
-	// TODO: Ensure they can bet.
-	// Maximum is their amount of chips. (if chips < min, min = chips)
-	fmt.Printf("Player %s bets %s (%d)", player.DisplayName, gc.Args["amount"], actualbet)
-	DoBet(game, tablename, gc.PlayerId, int(actualbet), false)
+	// Table current
+	curbet := table.CurBet
+	total := ibet + player.Bet
+	// Total bet by player:
+	if ibet >= player.Chips {
+		// Player is all-in
+		ibet = player.Chips
+		total = ibet + player.Bet
+		if total <= curbet {
+			fmt.Printf("Allin call\n")
+			DoCall(game, tablename, gc.PlayerId, player.Chips)
+			return SAVE|RUN
+		}
+		fmt.Printf("Allin bet\n")
+		// Else fall through to DoBet
+	} else {
+		// Player is not all-in.
+		if total == table.CurBet {
+			fmt.Printf("Call")
+			// Call or Check
+			DoCall(game, tablename, gc.PlayerId, ibet)
+			return SAVE|RUN
+		}
+		// This is either a bet or a raise. Since player is not all-in,
+		// this must be more than MinBet
+		if (total - curbet) < table.MinBet {
+			fmt.Printf("Bad bet")
+			return ERR
+		}
+	}
+
+	fmt.Printf("Player %s bets %s (%d)", player.DisplayName, gc.Args["amount"], ibet)
+	DoBet(game, tablename, gc.PlayerId, int(ibet), false)
 	return SAVE|RUN
 }

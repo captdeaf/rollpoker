@@ -37,7 +37,7 @@ var Poker = {
 
     // Initialize all the renderers
     Signup.Setup();
-    TableRenderer.Setup();
+    Table.Setup();
   },
   SetPlayerCookie: function(name, val) {
     // We set this in a cookie.
@@ -49,7 +49,7 @@ var Poker = {
     console.log("Set:", newcookie)
   },
   UpdateSettings: function(settings) {
-    TableRenderer.UpdateSettings(settings);
+    Table.UpdateSettings(settings);
   },
   GetPlayerId: function() {
     var m = document.cookie.match(/playerid=(\w+)/)
@@ -64,21 +64,27 @@ var Poker = {
     }
   },
   LAST_STATE: "NOSTATE",
-  LAST_DATA: {},
+  DATA: {},
   UpdateState: function(doc) {
+    Poker.PLAYER = undefined;
+    _.each(doc.Players, function(p) {
+      if (p.PlayerId == Poker.PLAYER_ID) {
+        Poker.PLAYER = p;
+      }
+    });
     var isNew = false;
     if (Poker.LAST_STATE != doc.State) {
       isNew = true;
       Poker.LAST_STATE = doc.State;
     }
-    Poker.LAST_DATA = doc;
-    var handler = TableRenderer;
+    Poker.DATA = doc;
+    var handler = Table;
     if (doc.State == "NOGAME") {
       // Listing of players currently registered, and ability to register.
       handler = Signup;
     }
     if (isNew) {
-      handler.Start();
+      handler.Start(doc);
     }
     handler.Update(doc);
   },

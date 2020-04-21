@@ -18,11 +18,28 @@
   }
 
   div.myhand {
+    position: absolute;
     display: inline-block;
     padding: 5px;
     background-color: lightgreen;
     transform: scale(2.0);
     transform-origin: 0 0;
+    z-index: 20;
+  }
+
+  div.betplaque {
+    position: relative;
+    left: 300px;
+    top: 30px;
+    display: inline-block;
+    padding: 5px;
+    background-color: #ffddddaa;
+    border: 1px solid red;
+    z-index: 30;
+  }
+  input.betp {
+    width: 5em;
+    text-align: right;
   }
 
   div.board {
@@ -43,13 +60,20 @@
     margin-left: -20px;
   }
 
-  ul.pile {
-    vertical-align: bottom;
+  div.pilecontainer {
     display: inline-block;
     position: relative;
+    vertical-align: bottom;
+    height: 154px;
+    width: 129px;
+  }
+  ul.pile {
+    display: inline-block;
+    position: absolute;
+    bottom: 50px;
+    left: 0px;
     list-style-type: none;
     left: 5px;
-    height: 154px;
     width: 129px;
     margin: 0;
     padding: 0;
@@ -60,15 +84,8 @@
     margin: 0;
     position: relative;
     width: 129px;
-  }
-  ul.pile li:not(:first-child) {
     margin-top: -10px;
     height: 5px;
-  }
-
-  ul.pile li:first-child {
-    margin-top: 50px;
-    height: 45px;
   }
 
   div.chip {
@@ -156,6 +173,23 @@
     text-align: left;
     transform: scale(0.20);
     transform-origin: 0 0;
+    vertical-align: bottom;
+  }
+
+  div.bigpiles {
+    width: 720px;
+    height: 120px;
+    position: relative;
+    text-align: left;
+    transform: scale(0.40);
+    transform-origin: 0 0;
+    vertical-align: bottom;
+  }
+
+  div.betchips {
+    width: 220px;
+    height: 72px;
+    position: relative;
   }
 
   div.playerstate {
@@ -209,11 +243,6 @@
 
   div.tables {
     z-index: 40;
-  }
-
-  div.GameButtons {
-    background-color: #ddffddaa;
-    border: 1px solid red;
   }
 
   button.gamecommand {

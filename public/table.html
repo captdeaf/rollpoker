@@ -10,7 +10,7 @@
     <script type="text/javascript" src="https://www.gstatic.com/firebasejs/7.14.0/firebase-firestore.js"></script>
     <script type="text/javascript" src="/underscore-min.js"></script>
     <script type="text/javascript" src="/jquery-3.4.1.min.js"></script>
-    <script type="text/javascript" src="/tablerender.js"></script>
+    <script type="text/javascript" src="/table.js"></script>
     <script type="text/javascript" src="/signup.js"></script>
     <script type="text/javascript" src="/events.js"></script>
     <script type="text/javascript" src="/poker.js"></script>
@@ -20,27 +20,27 @@
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
       <div class="playerinfo <%= seat %> <%= player.State %>">
         <div class="playername"><%= player.DisplayName %><tt class="cash"><%= player.Chips %></tt></div>
-        <div class="playerpiles"><%= TableRenderer.ChipStack(player.Chips) %></div>
+        <div class="playerpiles"><%= Table.ChipStack(player.Chips) %></div>
         <div class="playerstate"><%= player.State %></div>
         <div class="playerhand hand">
         <% if (player.PlayerId == Poker.PLAYER_ID) { %>
-          <% _.each(TableRenderer.DecryptMyHand(player.Hand), function(cardval) { %>
+          <% _.each(Table.DecryptMyHand(player.Hand), function(cardval) { %>
             <div class="card <%= cardval %>"></div>
           <% }); %>
         <% } else { %>
-          <% _.each(TableRenderer.GetHand(player.Hand), function(cardval) { %>
+          <% _.each(Table.GetHand(player.Hand), function(cardval) { %>
             <div class="card bg"></div>
           <% }); %>
         <% } %>
         </div>
       </div>
       <% if (player.Bet > 0) { %>
-        <div class="<%= seat %>bet playerbet"><%= TableRenderer.ChipStack(player.Bet) %><tt class="betamt"><%= player.Bet %></tt></div>
+        <div class="<%= seat %>bet playerbet"><%= Table.ChipStack(player.Bet) %><tt class="betamt"><%= player.Bet %></tt></div>
       <% } %>
     <% } %>
     <% if (table) { %>
       <% if (table.Pot > 0) { %>
-        <div class="pot"><%= TableRenderer.ChipStack(table.Pot) %><tt class="betamt"><%= table.Pot %></tt></div>
+        <div class="pot"><%= Table.ChipStack(table.Pot) %><tt class="betamt"><%= table.Pot %></tt></div>
       <% } %>
       <% if (table.Cards && table.Cards.board) { %>
         <div class="board">
@@ -54,15 +54,24 @@
   </script>
   <script type="text/template" id="tableview">
     <div id="tables"></div>
-    <div id="myhand" class="grow myhand"></div>
-    <div id="betplaque"></div>
+    <div id="lower">
+      <div id="myhand" class="grow myhand"></div>
+      <div id="betplaque" class="betplaque"></div>
+    </div>
   </script>
   <script type="text/template" id="myhandview">
-    <% _.each(TableRenderer.DecryptMyHand(player.Hand), function(cardval) { %>
+    <% _.each(Table.DecryptMyHand(player.Hand), function(cardval) { %>
       <div class="card <%= cardval %>"></div>
     <% }); %>
   </script>
   <script type="text/template" id="betplaqueview">
+    <div id="mybetchips" class="betchips"></div>
+    <div class="beti"><input class="betp" type="text" name="amount" value="">&nbsp;&nbsp;&nbsp;<tt class="betdesc">(Call)</tt></div>
+    <div class="betbuttons">
+      <button class="bet" name="betcall"> (Call)</button>
+      <button class="bet" name="betsub">- BB</button>
+      <button class="bet" name="betadd">+ BB</button>
+    </div>
   </script>
   <script type="text/template" id="signupview">
     <h3>Players currently involved:</h3>
