@@ -20,6 +20,10 @@ import (
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
+var BASE_URI string = "https://rollpoker.web.app"
+var SEND_EMAIL bool = true
+var FAKE_COMMANDS bool = false
+
 type GameSettings struct {
 	GameType	string	// Cash, SitNGo
 	BetLimit	string	// NoLimit, PotLimit
@@ -77,10 +81,16 @@ type GameEvent struct {
 	Log		string	// "Chris folded". If nil, no log.
 }
 
+type LogItem struct {
+	Timestamp	int64
+	Message		string
+}
+
 type Game struct {
 	Name	string
 	Private	PrivateGameInfo
 	Public	PublicGameInfo
+	TX	*firestore.Transaction
 }
 
 const (
@@ -133,7 +143,7 @@ func init() {
 		FIRESTORE_CLIENT, err = firestore.NewClient(ctx, "rollpoker")
 	}
 	if err != nil {
-		log.Printf("Can't get client: %v", err)
+		log.Printf("Can't get client: %v\n", err)
 		return
 	}
 	fmt.Println("Rollpoker started")
@@ -152,7 +162,7 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("args: %v", args)
+	fmt.Printf("args: %v\n", args)
 
 	var newgame Game
 	var settings GameSettings
@@ -211,28 +221,42 @@ func FetchGame(name string, tx *firestore.Transaction) *Game {
 	privRef := FIRESTORE_CLIENT.Doc("private/" + name)
 	priv, err := tx.Get(privRef)
 	if err != nil {
-		log.Printf("Can't get snapshot: %v", err)
+		log.Printf("Can't get snapshot: %v\n", err)
 		return nil
 	}
 	err = priv.DataTo(&game.Private)
 	if err != nil {
-		log.Printf("No priv.datato avail: %v", err)
+		log.Printf("No priv.datato avail: %v\n", err)
 		return nil
 	}
 
 	pubRef := FIRESTORE_CLIENT.Doc("public/" + name)
 	pub, err := tx.Get(pubRef)
 	if err != nil {
-		log.Printf("Can't get snapshot: %v", err)
+		log.Printf("Can't get snapshot: %v\n", err)
 		return nil
 	}
 	err = pub.DataTo(&game.Public)
 	if err != nil {
-		log.Printf("No pub.datato avail: %v", err)
+		log.Printf("No pub.datato avail: %v\n", err)
 		return nil
 	}
-	game.Name = name;
+	game.Name = name
+	game.TX = tx
 	return &game
+}
+
+func LogMessage(game *Game, msg string, fargs ...interface{}) {
+	litem := new(LogItem)
+	litem.Timestamp = time.Now().UnixNano()
+	litem.Message = fmt.Sprintf(msg, fargs...)
+	lname := fmt.Sprintf("public/%s/log/%d", game.Name, litem.Timestamp)
+	docref := FIRESTORE_CLIENT.Doc(lname)
+	err := game.TX.Set(docref, litem)
+	fmt.Println(litem.Message)
+	if err != nil {
+		fmt.Printf("Error saving LogItem: %v\n", err)
+	}
 }
 
 func SaveGame(game *Game, tx *firestore.Transaction) {
@@ -240,13 +264,13 @@ func SaveGame(game *Game, tx *firestore.Transaction) {
 	privref := FIRESTORE_CLIENT.Doc("private/" + game.Name)
 	err := tx.Set(privref, game.Private)
 	if err != nil {
-		fmt.Printf("Error saving private: %v", err)
+		fmt.Printf("Error saving private: %v\n", err)
 		return
 	}
 	pubref := FIRESTORE_CLIENT.Doc("public/" + game.Name)
 	err = tx.Set(pubref, game.Public)
 	if err != nil {
-		fmt.Printf("Error saving public: %v", err)
+		fmt.Printf("Error saving public: %v\n", err)
 		return
 	}
 	fmt.Println("Saved", game.Name)
@@ -282,15 +306,13 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 	subject := "RollPoker for " + gc.Args["DisplayName"]
 	to := mail.NewEmail(gc.Args["DisplayName"], gc.Args["Email"])
 
-	base_uri := "https://rollpoker.web.app"
-	// base_uri := "http://localhost"
-	link := base_uri + "/table/" +  gc.Name + "?id=" + player.PlayerId + "&key=" + playerKey
+	link := BASE_URI + "/table/" + gc.Name + "?id=" + player.PlayerId + "&key=" + playerKey
 
 	plainTextContent := "You have been invited to join a poker game: " + link
 	htmlContent := "<a href=\"" + link + "\">Click here to join the poker game</a>"
 	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
 	sgclient := sendgrid.NewSendClient(SENDGRID_API_KEY)
-	if true {
+	if SEND_EMAIL {
 		_, err := sgclient.Send(message)
 		if err != nil {
 			return false
@@ -301,6 +323,7 @@ func RegisterAccount(game *Game, gc *GameCommand) bool {
 	if game.Public.Players == nil {
 		game.Public.Players = make(map[string]*Player)
 	}
+	LogMessage(game, "%s has registered.", player.DisplayName)
 	game.Public.Players[player.PlayerId] = &player
 
 	return true
@@ -344,13 +367,15 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// TODO: DELETE THIS BEFORE PUSHING.
 			// It's just here for testing
-			// for pid, tplayer := range game.Public.Players {
-				// if tplayer.State == TURN {
-					// gc.PlayerId = pid
-					// player = tplayer
-					// break
-				// }
-			// }
+			if FAKE_COMMANDS {
+				for pid, tplayer := range game.Public.Players {
+					if tplayer.State == TURN {
+						gc.PlayerId = pid
+						player = tplayer
+						break
+					}
+				}
+			}
 			if player == nil {
 				// If PlayerId is nil, the only thing the player can do is "register" / invite.
 				http.Error(w, "You are not a player", http.StatusBadRequest)
@@ -374,7 +399,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		} else if dosave == false {
 			http.Error(w, "You can't do that", http.StatusBadRequest)
 		} else {
-			fmt.Fprintf(w, "success");
+			fmt.Fprintf(w, "success")
 		}
 		if dosave {
 			SaveGame(game, tx)

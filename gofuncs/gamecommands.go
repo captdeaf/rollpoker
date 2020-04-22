@@ -88,6 +88,7 @@ func (player *Player) TryStartGame(game *Game, gc *GameCommand) int {
 		go RunCommands(game.Name, tname, i)
 		i += 1
 	}
+	LogMessage(game, "%s starts the game", player.DisplayName)
 	return SAVE
 }
 
@@ -101,8 +102,8 @@ func (player *Player) TryCheck(game *Game, gc *GameCommand) int {
 	}
 
 	// Maximum is their amount of chips. (if chips < min, min = chips)
-	fmt.Printf("Player %s checks for %d", player.DisplayName, 0)
 	DoCall(game, tablename, gc.PlayerId, 0)
+	LogMessage(game, "%s checks", player.DisplayName)
 	return SAVE|RUN
 }
 
@@ -110,8 +111,8 @@ func (player *Player) TryFold(game *Game, gc *GameCommand) int {
 	if player.State != TURN { return ERR }
 	tablename := game.TableForPlayer(player)
 
-	fmt.Printf("Player %s folds\n", player.DisplayName)
 	DoFold(game, tablename, gc.PlayerId)
+	LogMessage(game, "%s folds", player.DisplayName)
 	return SAVE|RUN
 }
 
@@ -126,8 +127,8 @@ func (player *Player) TryCall(game *Game, gc *GameCommand) int {
 	}
 
 	// Maximum is their amount of chips. (if chips < min, min = chips)
-	fmt.Printf("Player %s calls for %d\n", player.DisplayName, remaining)
 	DoCall(game, tablename, gc.PlayerId, remaining)
+	LogMessage(game, "%s calls for %d", player.DisplayName, remaining)
 	return SAVE|RUN
 }
 
@@ -139,9 +140,7 @@ func (player *Player) TryBet(game *Game, gc *GameCommand) int {
 	i64bet, ierr := strconv.ParseInt(gc.Args["amount"], 10, 32)
 	ibet := int(i64bet)
 
-	fmt.Printf("ibet: %d\n", ibet)
 	if ierr != nil || ibet < 0 { return ERR }
-	fmt.Printf("ibet good\n")
 
 	// Table current
 	curbet := table.CurBet
@@ -153,10 +152,12 @@ func (player *Player) TryBet(game *Game, gc *GameCommand) int {
 		total = ibet + player.Bet
 		if total <= curbet {
 			fmt.Printf("Allin call\n")
+			LogMessage(game, "%s goes all-in with %d", player.DisplayName, player.Chips)
 			DoCall(game, tablename, gc.PlayerId, player.Chips)
 			return SAVE|RUN
 		}
 		fmt.Printf("Allin bet\n")
+		LogMessage(game, "%s goes all-in with %d", player.DisplayName, player.Chips)
 		// Else fall through to DoBet
 	} else {
 		// Player is not all-in.
@@ -164,6 +165,7 @@ func (player *Player) TryBet(game *Game, gc *GameCommand) int {
 			fmt.Printf("Call")
 			// Call or Check
 			DoCall(game, tablename, gc.PlayerId, ibet)
+			LogMessage(game, "%s calls with %d", player.DisplayName, ibet)
 			return SAVE|RUN
 		}
 		// This is either a bet or a raise. Since player is not all-in,
@@ -172,9 +174,13 @@ func (player *Player) TryBet(game *Game, gc *GameCommand) int {
 			fmt.Printf("Bad bet")
 			return ERR
 		}
+		if table.CurBet > 0 {
+			LogMessage(game, "%s raises by %d", player.DisplayName, total - table.CurBet)
+		} else {
+			LogMessage(game, "%s bets %d", player.DisplayName, total)
+		}
 	}
 
-	fmt.Printf("Player %s bets %s (%d)", player.DisplayName, gc.Args["amount"], ibet)
 	DoBet(game, tablename, gc.PlayerId, int(ibet), false)
 	return SAVE|RUN
 }

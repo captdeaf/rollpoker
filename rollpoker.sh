@@ -3,7 +3,9 @@
 export PATH="$PATH:/usr/local/go/bin"
 export GOROOT="/usr/local/go"
 
-export funcs="MakeTable"
+export funcs="MakeTable Poker"
+
+set -ex
 
 case "$1" in
   gohost)
@@ -21,7 +23,9 @@ case "$1" in
     # And deploy gofuncs to gcloud functions
     ;;
   godeploy)
-    (cd gofuncs ; gcloud functions deploy $funcs --runtime go113 --trigger-http --allow-unauthenticated)
+    for func in $funcs ; do
+      (cd gofuncs ; gcloud functions deploy $func --runtime go113 --trigger-http --allow-unauthenticated)
+    done
     ;;
   deploy)
     $0 webdeploy && $0 godeploy

@@ -27,10 +27,30 @@
     z-index: 20;
   }
 
+  div.lower {
+    position: relative;
+  }
+
+  div.indicator {
+    position: relative;
+    left: 300px;
+    top: -10px;
+    height: 30px;
+    width: 220px;
+    display: inline-block;
+    vertical-align: middle;
+    text-align: center;
+    padding-top: 10px;
+    padding: 4px;
+    background-color: #ddddffaa;
+    border: 1px solid red;
+    z-index: 30;
+  }
+
   div.betplaque {
     position: relative;
     left: 300px;
-    top: 30px;
+    top: 0px;
     display: inline-block;
     padding: 5px;
     background-color: #ffddddaa;
@@ -249,10 +269,4 @@
     display: block;
     background-color: gray;
     padding: 1em;
-  }
-
-  body {
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
   }

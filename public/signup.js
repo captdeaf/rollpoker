@@ -21,7 +21,7 @@ var Signup = {
     $('#signups').html(Signup.LISTING(state));
   },
   ShowForm: function() {
-    $('#startgame').click(function(evt) {
+    $('#startgame').on("click touchstart", function(evt) {
       Poker.SendCommand("StartGame", {});
       evt.preventDefault();
       evt.stopPropagation();

@@ -7,6 +7,10 @@
         "destination": "/table.html"
       },
       {
+        "source": "/Poker",
+        "function": "Poker"
+      },
+      {
         "source": "/MakeTable",
         "function": "MakeTable"
       }

@@ -1,6 +1,7 @@
 package rollpoker
 
 import (
+	"strings"
 	"fmt"
 	"sort"
 	"time"
@@ -26,6 +27,7 @@ func (game *Game) Shuffle(tablename string, _ int) bool {
 		"ca", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9", "ct", "cj", "cq", "ck",
 	}
 
+	LogMessage(game, "Shuffling deck.")
 	deckcopy := make([]string, len(DECK))
 	copy(deckcopy, DECK)
 	rand.Shuffle(len(deckcopy), func(i, j int) {
@@ -44,8 +46,10 @@ func (game *Game) Burn(tablename string, _ int) bool {
 func (game *Game) TexFlop(tablename string, _ int) bool {
 	table := game.Public.Tables[tablename]
 	deck := game.Private.TableDecks[tablename]
-	table.Cards["board"] = deck[:3]
+	flop := deck[:3]
+	table.Cards["board"] = flop
 	game.Private.TableDecks[tablename] = deck[3:]
+	LogMessage(game, "Flop: <<%s>>", strings.Join(flop, ">>,<<"))
 	return true
 }
 
@@ -53,6 +57,7 @@ func (game *Game) TexTurn(tablename string, _ int) bool {
 	table := game.Public.Tables[tablename]
 	deck := game.Private.TableDecks[tablename]
 	table.Cards["board"] = append(table.Cards["board"], deck[0])
+	LogMessage(game, "Turn: <<%s>>", deck[0])
 	game.Private.TableDecks[tablename] = deck[1:]
 	return true
 }
@@ -61,6 +66,7 @@ func (game *Game) TexRiver(tablename string, _ int) bool {
 	table := game.Public.Tables[tablename]
 	deck := game.Private.TableDecks[tablename]
 	table.Cards["board"] = append(table.Cards["board"], deck[0])
+	LogMessage(game, "River: <<%s>>", deck[0])
 	game.Private.TableDecks[tablename] = deck[1:]
 	return true
 }
@@ -70,6 +76,7 @@ func (game *Game) NewGame(tablename string, count int) bool {
 	table.Dolist = make(GameDef, len(GAME_COMMANDS["texasholdem"]))
 	table.Dealer = GetNextPlayer(game, table, table.Dealer)
 	copy(table.Dolist, GAME_COMMANDS["texasholdem"])
+	LogMessage(game, "New Hand")
 	return true
 }
 
@@ -92,6 +99,7 @@ func (game *Game) DealAllDown(tablename string, count int) bool {
 		}
 	}
 	game.Private.TableDecks[tablename] = deck[idx:]
+	LogMessage(game, "Dealing %d cards to each player", count)
 
 	return true
 }
@@ -110,19 +118,23 @@ type PlayerHand struct {
 	Score	int
 }
 
-func MakePots(game *Game, table *TableState) []Pot {
+func MakePots(game *Game, table *TableState) []*Pot {
 	stillins := make([]*Player, 0)
 	seenpots := make(map[int]bool)
 	for _, pid := range table.Seats {
 		player := game.Public.Players[pid]
-		if player.State == CALLED || player.State == ALLIN || player.State == BET {
+		if player.State != FOLDED {
 			stillins = append(stillins, player)
 			seenpots[player.TotalBet] = true
 		}
 	}
 	fmt.Printf("# of seenpots: %d\n", len(seenpots))
-	pots, idx := make([]Pot, len(seenpots)), 0
-	for amt, _ := range seenpots { pots[idx].BetAmount = amt; idx++ }
+	pots, idx := make([]*Pot, len(seenpots)), 0
+	for amt, _ := range seenpots {
+		pots[idx] = new(Pot)
+		pots[idx].BetAmount = amt
+		idx++
+	}
 
 	fmt.Printf("# of pots: %d\n", len(pots))
 	taken := 0
@@ -145,7 +157,7 @@ func MakePots(game *Game, table *TableState) []Pot {
 	return pots
 }
 
-func PayoutPots(pots []Pot, hands []PlayerHand) {
+func PayoutPots(game *Game, pots []*Pot, hands []PlayerHand) {
 	// Sort in reverse, so greatest first
 	sort.Slice(hands, func(i, j int) bool { return hands[i].Hand > hands[j].Hand })
 	// Map PlayerId to Hands
@@ -171,17 +183,21 @@ func PayoutPots(pots []Pot, hands []PlayerHand) {
 		for _, player := range pots[i].Players {
 			if idScore[player.PlayerId].Score == pots[i].WinningScore {
 				pots[i].Winners = append(pots[i].Winners, player)
+				// We have a winner, show this player's cards.
+				player.Hand = strings.Join(GetHandVals(game, player), "")
+				LogMessage(game, "%s wins the %d-chip pot with %s", player.DisplayName, pots[i].Chips, idScore[player.PlayerId].Hand)
+				player.State = idScore[player.PlayerId].Hand
 			}
 		}
 	}
 
 	// Pay out each pot
 	for i, _ := range pots {
-		DivvyPot(pots[i])
+		DivvyPot(game, pots[i])
 	}
 }
 
-func DivvyPot(pot Pot) {
+func DivvyPot(game *Game, pot *Pot) {
 	// pot.Winners contains the players that won.
 	// pot.Chips contains how many chips to give out.
 	fmt.Println("Pot to pay out:")
@@ -220,9 +236,8 @@ func (game *Game) TexWin(tablename string, _ int) bool {
 		player := game.Public.Players[pid]
 		allhands[idx].Player = player
 		hand := GetHandVals(game, player)
-		if player.State == CALLED || player.State == ALLIN || player.State == BET {
+		if player.State == WAITING || player.State == CALLED || player.State == ALLIN || player.State == BET {
 			allhands[idx].Hand, allhands[idx].Score = GetTexasRank(hand, table.Cards["board"])
-			player.State = allhands[idx].Hand // Four of a kind, Set, etc.
 		} else {
 			allhands[idx].Hand = ""
 			allhands[idx].Score = 0
@@ -230,7 +245,7 @@ func (game *Game) TexWin(tablename string, _ int) bool {
 		idx++
 	}
 
-	PayoutPots(pots, allhands)
+	PayoutPots(game, pots, allhands)
 	return true
 }
 
@@ -252,6 +267,7 @@ func (game *Game) FoldedWin(tablename string, _ int) bool {
 		return false
 	}
 	player := active[0]
+	LogMessage(game, "%s wins %d chips", player.DisplayName, table.Pot)
 	player.Chips += table.Pot
 	player.State = WON
 	table.Pot = 0
@@ -591,26 +607,26 @@ func init() {
 		{"ResetHand", 0, 0},
 		{"Shuffle", 0, 0},
 		{"DealAllDown", 2, 0},
-		{"ClearBets", 0, 1},
+		{"ClearBets", 0, 0},
 		{"HoldemBlinds", 0, 0},
-		{"BetRound", 1, 0},
+		{"BetRound", 0, 1},
 		{"CollectPot", 0, 0},
 		{"Burn", 0, 0},
-		{"TexFlop", 0, 1},
+		{"TexFlop", 0, 0},
 		{"ClearBets", 0, 0},
 		{"BetRound", 0, 1},
 		{"CollectPot", 0, 0},
 		{"Burn", 0, 0},
-		{"TexTurn", 0, 1},
-		{"ClearBets", 0, 0},
+		{"TexTurn", 0, 0},
+		{"ClearBets", 0, 1},
 		{"BetRound", 0, 1},
 		{"CollectPot", 0, 0},
 		{"Burn", 0, 0},
 		{"TexRiver", 0, 1},
-		{"ClearBets", 0, 0},
+		{"ClearBets", 0, 1},
 		{"BetRound", 0, 1},
 		{"CollectPot", 0, 0},
-		{"TexWin", 0, 7},
+		{"TexWin", 0, 8},
 		{"NewGame", 0, 0},
 	}
 	GAME_COMMANDS["_foldedwin"] = GameDef {

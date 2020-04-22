@@ -22,7 +22,7 @@ var Poker = {
     } else {
       return;
     }
-    var m = document.location.search.match(/\?id=(\w+)\&key=(\w+)$/);
+    var m = document.location.search.match(/\?id=([\w-]+)\&key=([\w-]+)$/);
     if (m) {
       Poker.PLAYER_ID = m[1];
       Poker.PLAYER_KEY = m[2];
@@ -129,35 +129,37 @@ var Poker = {
       Poker.DOCUMENT.onSnapshot(function(doc) {
         Poker.Update(doc.data());
       });
+
+      Poker.LOGS = db.collection("/public/" + Poker.NAME + "/log")
+      Poker.LOGS.orderBy("Timestamp", "desc").limit(30).get().then(function(logs) {
+        Poker.ProcessLogs(logs);
+        // Then start a tail.
+        Poker.LOGS.orderBy("Timestamp", "desc").limit(5).onSnapshot(function(logs) {
+          Poker.ProcessLogs(logs);
+        });
+      });
     }
   },
-  InitJqueryTouch: function() {
-    function touchHandler(event) {
-    var touch = event.changedTouches[0];
-
-    var simulatedEvent = document.createEvent("MouseEvent");
-    simulatedEvent.initMouseEvent({
-        touchstart: "mousedown",
-        touchmove: "mousemove",
-        touchend: "mouseup"
-    }[event.type], true, true, window, 1,
-        touch.screenX, touch.screenY,
-        touch.clientX, touch.clientY, false,
-        false, false, false, 0, null);
-
-    touch.target.dispatchEvent(simulatedEvent);
-    event.preventDefault();
+  SEEN_LOGS: {},
+  UpdateLog: function(log) {
+    console.log(log.Timestamp, log.Message);
+  },
+  ProcessLogs: function(logs) {
+    // We get them in an ordered descent
+    var rev = [];
+    logs.forEach(function(log) {
+      rev.push(log.data());
+    });
+    for (var i = rev.length - 1; i >= 0; i--) {
+      if (!Poker.SEEN_LOGS[rev[i].Timestamp]) {
+        Poker.SEEN_LOGS[rev[i].Timestamp] = true
+        Poker.UpdateLog(rev[i]);
+      }
     }
-
-    document.addEventListener("touchstart", touchHandler, true);
-    document.addEventListener("touchmove", touchHandler, true);
-    document.addEventListener("touchend", touchHandler, true);
-    document.addEventListener("touchcancel", touchHandler, true);
   },
 };
 
 $(document).ready(function() {
-  Poker.InitJqueryTouch();
   Poker.SetupFirebase();
   Poker.Setup();
   Poker.Monitor();

@@ -21,7 +21,15 @@
       <div class="playerinfo <%= seat %> <%= player.State %>">
         <div class="playername"><%= player.DisplayName %><tt class="cash"><%= player.Chips %></tt></div>
         <div class="playerpiles"><%= Table.ChipStack(player.Chips) %></div>
-        <div class="playerstate"><%= player.State %></div>
+        <div class="playerstate">
+          <% if (player.State == "TURN") { %>
+            BETTING
+          <% } else if (player.State == "CALLED" && player.Bet == 0) { %>
+            CHECKED
+          <% } else { %>
+            <%= player.State %>
+          <% } %>
+        </div>
         <div class="playerhand hand">
         <% if (player.PlayerId == Poker.PLAYER_ID) { %>
           <% _.each(Table.DecryptMyHand(player.Hand), function(cardval) { %>
@@ -29,7 +37,7 @@
           <% }); %>
         <% } else { %>
           <% _.each(Table.GetHand(player.Hand), function(cardval) { %>
-            <div class="card bg"></div>
+            <div class="card <%= cardval %>"></div>
           <% }); %>
         <% } %>
         </div>
@@ -54,10 +62,13 @@
   </script>
   <script type="text/template" id="tableview">
     <div id="tables"></div>
-    <div id="lower">
-      <div id="myhand" class="grow myhand"></div>
-      <div id="betplaque" class="betplaque"></div>
-    </div>
+    <% if (Poker.PLAYER) { %>
+      <div id="lower">
+        <div id="myhand" class="grow myhand"></div>
+        <div id="indicator" class="indicator"></div><br>
+        <div id="betplaque" class="betplaque"></div>
+      </div>
+    <% } %>
   </script>
   <script type="text/template" id="myhandview">
     <% _.each(Table.DecryptMyHand(player.Hand), function(cardval) { %>

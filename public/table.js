@@ -8,7 +8,7 @@ var Table = {
   },
   Start: function(doc) {
     $('body').html(Table.VIEW());
-    $('.gamecommand').click(function(evt) {
+    $('.gamecommand').on("click touchstart", function(evt) {
       var me = $(this);
       var dat = me.data();
       for (var i in dat) {
@@ -25,7 +25,7 @@ var Table = {
         if (data.yd < -150) {
           // Swiped the cards up. Fold.
           Poker.SendCommand("Fold", {});
-        } else if ((Date.now() - lastDrop) < 1500) {
+        } else if (data.yd < 4 && data.yd > -4 && data.xd > -4 && data.xd < 4 && (Date.now() - lastDrop) < 700) {
           Poker.SendCommand("Check", {});
         } else {
           lastDrop = Date.now();
@@ -72,17 +72,20 @@ var Table = {
           tt.text("All-In");
         }
       });
-      bp.find('button[name="betcall"]').click(function() {
+      bp.find('button[name="betcall"]').on("click touchstart", function() {
         inp.val(Table.CURBET - Poker.PLAYER.Bet);
         inp.trigger("change");
       });
-      bp.find('button[name="betadd"]').click(function() {
+      bp.find('button[name="betadd"]').on("click touchstart", function() {
         inp.val(parseInt(inp.val()) + Table.MINBET);
         inp.trigger("change");
       });
-      bp.find('button[name="betsub"]').click(function() {
+      bp.find('button[name="betsub"]').on("click touchstart", function() {
         inp.val(parseInt(inp.val()) - Table.MINBET);
         inp.trigger("change");
+      });
+      inp.on("click touchstart", function() {
+        inp.focus();
       });
     }
   },
@@ -97,12 +100,24 @@ var Table = {
     var table = $(Table.TABLE({table:tableData, players: data.Players}));
     $('#tables').empty();
     $('#tables').append(table);
+    Table.UpdateIndicator(tableData,Poker.PLAYER);
     if (Poker.PLAYER) {
       if (!Table.IsSameHand(Poker.PLAYER.Hand, Table.LASTHAND)) {
         Table.LASTHAND = Poker.PLAYER.Hand;
         Table.UpdateHand(Poker.PLAYER);
       }
       Table.UpdateBetPlaque(tableData,Poker.PLAYER);
+      Table.UpdateIndicator(tableData,Poker.PLAYER);
+    }
+  },
+  UpdateIndicator: function(table, player) {
+    $('#indicator').text(Table.GetIndicatorText(table, player));
+  },
+  GetIndicatorText: function(table, player) {
+    if (player.State == "TURN") {
+      return "Your Turn";
+    } else {
+      return player.State;
     }
   },
   LASTHAND: [],
@@ -118,7 +133,7 @@ var Table = {
   PLYBET: -1,
   UpdateBetPlaque: function(tableData, player, val) {
     if (Table.MINBET != tableData.MinBet || Table.CURBET != tableData.CurBet ||
-        Player.Bet != Table.PLYBET) {
+        player.Bet != Table.PLYBET) {
       Table.MINBET = tableData.MinBet;
       Table.CURBET = tableData.CurBet;
       Table.PLYBET = player.Bet;
@@ -138,37 +153,53 @@ var Table = {
       $('#myhand').append($(Table.HANDVIEW({player: player})));
     }
   },
-  SetDraggable: function(jqe, opts, cb) {
+  SetDraggable: function(jqe, opts, cb, cbpress) {
     function handle_mousedown(e){
       if (window.dragging != undefined) return;
       window.dragging = true;
       var origX = e.pageX;
       var origY = e.pageY;
       var off = jqe.offset();
-      function handle_dragging(e){
+      function handle_dragging(evt){
         var newoff = {
           left: off.left,
           top: off.top,
         }
-        if (opts.horiz) newoff.left += (e.pageX - origX);
-        if (opts.vert) newoff.top += (e.pageY - origY);
+        if (opts.horiz) newoff.left += (evt.pageX - origX);
+        if (opts.vert) newoff.top += (evt.pageY - origY);
         jqe.offset(newoff);
+        evt.preventDefault();
       }
-      function handle_mouseup(e){
+      function handle_mouseup(evt){
+        if (cbpress) {
+          cbpress("end");
+        }
         $('body')
+        .off('touchend', handle_mouseup)
+        .off('touchmove', handle_dragging)
+        .off('touchcancel', handle_mouseup)
         .off('mousemove', handle_dragging)
         .off('mouseup', handle_mouseup)
         .off('mouseleave', handle_mouseup);
         jqe.offset(off);
-        cb(jqe, {x: e.pageX, y: e.pageY, xd: e.pageX - origX, yd: e.pageY - origY});
+        cb(jqe, {x: evt.pageX, y: evt.pageY, xd: evt.pageX - origX, yd: evt.pageY - origY});
+        evt.preventDefault();
         window.dragging = undefined;
       }
       $('body')
       .on('mouseleave', handle_mouseup)
       .on('mouseup', handle_mouseup)
-      .on('mousemove', handle_dragging);
+      .on('mousemove', handle_dragging)
+      .on('touchend', handle_mouseup)
+      .on('touchmove', handle_dragging)
+      .on('touchcancel', handle_mouseup);
+      if (cbpress) {
+        cbpress("start");
+      }
+      e.preventDefault();
     }
     jqe.mousedown(handle_mousedown);
+    jqe.on("touchstart", handle_mousedown);
   },
   GetHand: function(str) {
     var ret = [];

@@ -24,6 +24,9 @@ import (
 )
 
 func main() {
+	rollpoker.BASE_URI = "http://localhost"
+	rollpoker.SEND_EMAIL = false
+	rollpoker.FAKE_COMMANDS = true
 	http.HandleFunc("/MakeTable", rollpoker.MakeTable)
 	http.HandleFunc("/Poker", rollpoker.Poker)
 
