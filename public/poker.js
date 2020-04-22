@@ -84,6 +84,7 @@ var Poker = {
       handler = Signup;
     }
     if (isNew) {
+      Poker.LogCallback = undefined;
       handler.Start(doc);
     }
     handler.Update(doc);
@@ -141,8 +142,12 @@ var Poker = {
     }
   },
   SEEN_LOGS: {},
+  LogCallback: undefined,
   UpdateLog: function(log) {
     console.log(log.Timestamp, log.Message);
+    if (Poker.LogCallback) {
+      Poker.LogCallback(log.Timestamp, log.Message);
+    }
   },
   ProcessLogs: function(logs) {
     // We get them in an ordered descent

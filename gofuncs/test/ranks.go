@@ -2,15 +2,19 @@
 package main
 
 import (
+	"fmt"
 	"strings"
-
 	"deafcode.com/rollpoker"
 )
 
 
 func Rank(cardstr string) int {
 	cards := strings.Fields(cardstr)
-	return rollpoker.GetTexasRank(cards, []string{})
+	wincards, name, val := rollpoker.GetTexasRank(cards, []string{})
+	if false {
+		fmt.Printf("Cards: %s: %s %x\n", strings.Join(wincards, ","), name, val)
+	}
+	return val
 }
 
 func init() {
@@ -59,6 +63,14 @@ RegisterTest("Higher full house found in 7 cards", func() bool {
 
 RegisterTest("Straight w/ different suits identical", func() bool {
 	return Rank("s3 s4 s5 c6 d7") == Rank("d3 d4 s5 c6 d7")
+})
+
+RegisterTest("6-high straight beats 5-high", func() bool {
+	return Rank("s5 s6 s3 c4 d2") > Rank("d5 d4 s3 ca d2")
+})
+
+RegisterTest("5-high straight beats best set", func() bool {
+	return Rank("sa da ha ck dq") < Rank("d5 d4 s3 ca d2")
 })
 
 }

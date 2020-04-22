@@ -115,6 +115,7 @@ type Pot struct {
 type PlayerHand struct {
 	Player	*Player
 	Hand	string
+	Cards	[]string
 	Score	int
 }
 
@@ -157,11 +158,11 @@ func MakePots(game *Game, table *TableState) []*Pot {
 	return pots
 }
 
-func PayoutPots(game *Game, pots []*Pot, hands []PlayerHand) {
+func PayoutPots(game *Game, pots []*Pot, hands []*PlayerHand) {
 	// Sort in reverse, so greatest first
 	sort.Slice(hands, func(i, j int) bool { return hands[i].Hand > hands[j].Hand })
 	// Map PlayerId to Hands
-	idScore := make(map[string]PlayerHand)
+	idScore := make(map[string]*PlayerHand)
 	for _, hand := range hands { idScore[hand.Player.PlayerId] = hand }
 	fmt.Println("Payout # of idscores: %v\n", len(idScore))
 
@@ -182,10 +183,13 @@ func PayoutPots(game *Game, pots []*Pot, hands []PlayerHand) {
 		pots[i].Winners = make([]*Player, 0)
 		for _, player := range pots[i].Players {
 			if idScore[player.PlayerId].Score == pots[i].WinningScore {
+				ph := idScore[player.PlayerId]
 				pots[i].Winners = append(pots[i].Winners, player)
 				// We have a winner, show this player's cards.
 				player.Hand = strings.Join(GetHandVals(game, player), "")
-				LogMessage(game, "%s wins the %d-chip pot with %s", player.DisplayName, pots[i].Chips, idScore[player.PlayerId].Hand)
+				LogMessage(game, "%s wins the %d-chip pot with %s: <<%s>>",
+						 player.DisplayName, pots[i].Chips,
+						 ph.Hand, strings.Join(ph.Cards, ">> <<"))
 				player.State = idScore[player.PlayerId].Hand
 			}
 		}
@@ -228,16 +232,17 @@ func (game *Game) TexWin(tablename string, _ int) bool {
 	//    2b) Any player w/ 0 chips left from TotalBets is busted out.
 	table := game.Public.Tables[tablename]
 	pots := MakePots(game, table)
-	allhands := make([]PlayerHand, len(table.Seats))
+	allhands := make([]*PlayerHand, len(table.Seats))
 	idx := 0
 
 	// Determine winners, and set their State to what they had.
 	for _, pid := range table.Seats {
 		player := game.Public.Players[pid]
+		allhands[idx] = new(PlayerHand)
 		allhands[idx].Player = player
 		hand := GetHandVals(game, player)
 		if player.State == WAITING || player.State == CALLED || player.State == ALLIN || player.State == BET {
-			allhands[idx].Hand, allhands[idx].Score = GetTexasRank(hand, table.Cards["board"])
+			allhands[idx].Cards, allhands[idx].Hand, allhands[idx].Score = GetTexasRank(hand, table.Cards["board"])
 		} else {
 			allhands[idx].Hand = ""
 			allhands[idx].Score = 0

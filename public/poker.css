@@ -47,6 +47,15 @@
     z-index: 30;
   }
 
+  div#logscreen {
+    overflow: scroll;
+    width: 400px;
+    height: 400px;
+    position: absolute;
+    left: 650px;
+    top: 50px;
+  }
+
   div.betplaque {
     position: relative;
     left: 300px;

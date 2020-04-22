@@ -88,6 +88,7 @@ var Table = {
         inp.focus();
       });
     }
+    Poker.LogCallback = Table.LogUpdate;
   },
   CHIP_VALS: "",
   Update: function(data) {
@@ -314,5 +315,37 @@ var Table = {
       piles.prepend($('<div class="pilecontainer">').append(pile));
     }
     return piles.wrapAll('<div>').parent().html();
+  },
+  GetUnicodeCard: function(card) {
+    var pref = {
+      s: "&#x1f0a",
+      h: "&#x1f0b",
+      d: "&#x1f0c",
+      c: "&#x1f0d",
+    }[card.substring(0,1)];
+    var suff = {
+      "a": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9",
+      "t": "a",
+      "j": "b",
+      "q": "d",
+      "k": "e",
+    }[card.substring(1,2)];
+    return pref + suff;
+  },
+  LogUpdate: function(ts, message) {
+    var upd = message.replace(/<<(\w+)>>/g, function(a, b) {
+      return Table.GetUnicodeCard(b);
+    });
+    var ls = $('#logscreen');
+    ls.append($("<p>").html(upd));
+    ls[0].scrollTop = ls[0].scrollHeight;
   },
 };
