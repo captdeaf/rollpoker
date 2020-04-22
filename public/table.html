@@ -19,6 +19,9 @@
     <div class="pokertable">
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
       <div class="playerinfo <%= seat %> <%= player.State %>">
+        <% if (player.PlayerId == table.Seats[table.Dealer]) { %>
+          <div class="dealerbutton"></div>
+        <% } %>
         <div class="playername"><%= player.DisplayName %><tt class="cash"><%= player.Chips %></tt></div>
         <div class="playerpiles"><%= Table.ChipStack(player.Chips) %></div>
         <div class="playerstate">
@@ -62,7 +65,7 @@
   </script>
   <script type="text/template" id="tableview">
     <div id="tables"></div>
-      <div id="logscreen"></div>
+    <div id="logscreen"></div>
     <% if (Poker.PLAYER) { %>
       <div id="lower">
         <div id="myhand" class="grow myhand"></div>
