@@ -15,8 +15,28 @@
     <script type="text/javascript" src="/events.js"></script>
     <script type="text/javascript" src="/poker.js"></script>
   </head>
+  <script type="text/template" id="adminlogin">
+    <input type="text" name="adminpw" placeholder="Admin Password">
+  </script>
   <script type="text/template" id="maintable">
     <div class="pokertable">
+      <div class="cardsettings" id="cardsettings"></div>
+      <div class="tableopts" id="tableopts">
+        <% if (game.CurrentBlinds) { %>
+          <% if (game.CurrentBlinds[0]) { %>
+            <div class="tinfo">SB: <tt><%= game.CurrentBlinds[0] %></tt></div>
+          <% } %>
+          <% if (game.CurrentBlinds[1]) { %>
+            <div class="tinfo">BB: <tt><%= game.CurrentBlinds[1] %></tt></div>
+          <% } %>
+        <% } %>
+        <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
+          <% if (player.State == "TURN") { %>
+            <div class="tinfo">Betting: <tt><%= player.DisplayName %></tt></div>
+          <% } %>
+        <% } %>
+        <div class="tinfo">Pot: <tt><%= table.Pot %></tt></div>
+      </div>
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
       <div class="playerinfo <%= seat %> <%= player.State %>">
         <% if (player.PlayerId == table.Seats[table.Dealer]) { %>

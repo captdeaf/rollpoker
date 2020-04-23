@@ -1,8 +1,43 @@
-Hmmmm -
+BUGS:
+* Bet plaque shows compared to minbet. Bet 50 -> "Raise 0"
+* "Calls with 0" instead of "Checks"
+* Whose turn is it? Show!
+* Show all-in cards instead of hiding until winner is declared.
+* Add All-in cards to log when auto-play is enabled.
+* Add bet amounts to green status div and player state. Use DisplayState?
 
-"Encrypt" players' cards using their "passwords"? That could be a pretty nifty way to
-give the same document to every player w/o leaking each card ... Saving a shitload of
-programming and calls!
+TODO:
+* Graying overlay of cards for "Checked" "Called", etc, if you've already
+  gone.
+* Show backs of cards, grayed out, for "folded" ?
+* Players need to bust out at end of round if no chips.
+* Auto-checkfold for idle players
+* Disable and discolor Bet Plaque when not able to do anything
+* Pre-check, Pre-fold
+* Muck cards or show 'em on loss?
+* Tournament features
+* Blind schedules
+* Pause blinds
+* Ranking list
+* Overlay messages? (Add PlayerId to LogItem)
+* Admin panel: Quit game, return to registry, Kick Player, kickstart game
+* Cash game support
+* Buyin button
+* Cashout button
+* index.html should store results in cookies and show them to reduce # of
+  "What was the game I created?"
 
-Salt using hand ID (random) + password, so that if a person gets the same hand twice,
-it's not recognizable.
+FIXED:
+* Draggable conflicts w/ safari scrolling: Overflow: auto on dragging div?
+* Buttons don't work on touchscreen devices
+* Disabling "selectable" prevents text boxes from being selected on mobile devices / iOS.
+* "Your bet" instead of "TURN"
+* "Checked" instead of "Called"
+* Bet Text box isn't editable
+* Winning hand isn't shown.
+* Log of what's going on.
+* Dealer token
+* Encrypt player cards
+* Show SB, BB.
+* Bigger Bet buttons & input (touchscreen, for crying out loud)
+* When folded, remove bet plaque and cards

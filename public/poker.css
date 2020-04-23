@@ -28,6 +28,41 @@
     transform-origin: 0 0;
   }
 
+  div.cardsettings {
+    display: inline-block;
+    position: absolute;
+    background-image: url('/cardsettings.png');
+    background-repeat: no-repeat;
+    background-size: 40px 40px;
+    top: 10px;
+    left: 10px;
+    height: 40px;
+    width: 40px;
+  }
+
+  div.tableopts {
+    position: absolute;
+    top: 60px;
+    left: 10px;
+    color: white;
+    width: 200px;
+    height: 200px;
+  }
+
+  div.tinfo {
+    padding: 3px;
+    font-size: 14pt;
+    font-weight: bold;
+  }
+
+  div.tinfo > tt {
+    color: yellow;
+    font-weight: bold;
+    font-size: 16pt;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+  }
+
   div.myhand {
     position: absolute;
     display: inline-block;
@@ -277,7 +312,15 @@
     width: 600px;
   }
 
-  div.gamebuttons {
+  div.betplaque input {
+    font-size: 14pt;
+    margin-bottom: 5px;
+    width: 160px;
+  }
+
+  div.betplaque button {
+    height: 50px;
+    width: 80px;
     z-index: 10;
   }
 

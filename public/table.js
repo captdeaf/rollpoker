@@ -6,6 +6,22 @@ var Table = {
     HANDVIEW: "#myhandview",
     BETVIEW: "#betplaqueview",
   },
+  QueuedCommand: undefined,
+  QueueCommand: function(cmd, args, clearonbet) {
+    Table.QueuedCommand = {
+      clearonbet: clearonbet,
+      cmd: cmd,
+      args: args,
+    };
+    if (Poker.PLAYER.State == "TURN") {
+      Table.PopCommand();
+    }
+  },
+  PopCommand: function() {
+    var qd = Table.QueuedCommand;
+    Table.QueuedCommand = undefined;
+    Poker.SendCommand(qd.cmd, qd.args);
+  },
   Start: function(doc) {
     $('body').html(Table.VIEW());
     $('.gamecommand').on("click touchstart", function(evt) {
@@ -57,6 +73,9 @@ var Table = {
         if (inp.val() > Poker.PLAYER.Chips) {
           inp.val(Poker.PLAYER.Chips);
         }
+        if (inp.val() == 0) {
+            tt.text("Check");
+        }
         if (inp.val() == min && Table.CURBET != 0) {
             tt.text("Call");
         }
@@ -90,6 +109,11 @@ var Table = {
     }
     Poker.LogCallback = Table.LogUpdate;
   },
+  OnTurnStart: function() {
+    if (Table.QueuedCommand) {
+      setTimeout(function() { Table.PopCommand(); }, 1000);
+    }
+  },
   CHIP_VALS: "",
   Update: function(data) {
     if (data.GameSettings.ChipValues != Table.CHIP_VALS) {
@@ -98,17 +122,30 @@ var Table = {
     }
     // TODO: Pick my table out from multiple tables.
     var tableData = data.Tables["table0"];
-    var table = $(Table.TABLE({table:tableData, players: data.Players}));
+    var table = $(Table.TABLE({game: data, table:tableData, players: data.Players}));
     $('#tables').empty();
     $('#tables').append(table);
     Table.UpdateIndicator(tableData,Poker.PLAYER);
     if (Poker.PLAYER) {
-      if (!Table.IsSameHand(Poker.PLAYER.Hand, Table.LASTHAND)) {
-        Table.LASTHAND = Poker.PLAYER.Hand;
-        Table.UpdateHand(Poker.PLAYER);
+      if (Poker.PLAYER.Hand && Poker.PLAYER.Hand.length > 0) {
+        if (Poker.PLAYER.Status != Table.LAST_STATUS) {
+          if (Poker.PLAYER.Status == "TURN") {
+            Table.OnTurnStart();
+          }
+          Table.LAST_STATUS = Poker.PLAYER.Status
+        }
+        if (!Table.IsSameHand(Poker.PLAYER.Hand, Table.LASTHAND)) {
+          Table.LASTHAND = Poker.PLAYER.Hand;
+          Table.UpdateHand(Poker.PLAYER);
+        }
+        Table.UpdateBetPlaque(tableData,Poker.PLAYER);
+        Table.UpdateIndicator(tableData,Poker.PLAYER);
+        $('#myhand').show();
+        $('#betplaque').show();
+      } else {
+        $('#myhand').hide();
+        $('#betplaque').hide();
       }
-      Table.UpdateBetPlaque(tableData,Poker.PLAYER);
-      Table.UpdateIndicator(tableData,Poker.PLAYER);
     }
   },
   UpdateIndicator: function(table, player) {

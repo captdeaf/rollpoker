@@ -69,8 +69,8 @@ type PublicGameInfo struct {
 	Tables		map[string]*TableState
 	Players		map[string]*Player
 	CurrentBlinds	[]int
-	BlindTime	int
-	PausedAt	int // Nonzero if paused
+	BlindTime	int64
+	PausedAt	int64 // Nonzero if paused
 }
 
 type GameEvent struct {
@@ -82,6 +82,7 @@ type GameEvent struct {
 }
 
 type LogItem struct {
+	PlayerId	string
 	Timestamp	int64
 	Message		string
 }
@@ -94,8 +95,8 @@ type Game struct {
 }
 
 const (
+	BUSTED = "BUSTED"
 	FOLDED = "FOLDED"	// Out of this hand
-
 	TURN = "TURN"		// It's their turn to do something
 	WAITING = "WAITING"	// Hasn't had their turn yet.
 	BET = "BET"		// Bet or raised

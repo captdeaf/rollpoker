@@ -71,7 +71,31 @@ func (game *Game) TexRiver(tablename string, _ int) bool {
 	return true
 }
 
-func (game *Game) NewGame(tablename string, count int) bool {
+func (game *Game) BustOut(tablename string, _ int) bool {
+	table := game.Public.Tables[tablename]
+	busts := make([]*Player, 0)
+	for seat, pid := range table.Seats {
+		player := game.Public.Players[pid]
+		if player.Chips == 0 {
+			busts = append(busts, player)
+			delete(table.Seats, seat)
+		}
+	}
+	if len(busts) > 0 {
+		ranking := 0
+		for _, table := range game.Public.Tables {
+			ranking += len(table.Seats)
+		}
+		sort.Slice(busts, func(i, j int) bool { return busts[i].TotalBet < busts[j].TotalBet })
+		for _, player := range busts {
+			LogMessage(game, "%s busts out with rank: %d", player.DisplayName, ranking)
+			player.State = BUSTED
+		}
+	}
+	return true
+}
+
+func (game *Game) NewGame(tablename string, _ int) bool {
 	table := game.Public.Tables[tablename]
 	table.Dolist = make(GameDef, len(GAME_COMMANDS["texasholdem"]))
 	table.Dealer = GetNextPlayer(game, table, table.Dealer)
@@ -143,8 +167,13 @@ func MakePots(game *Game, table *TableState) []*Pot {
 	for idx = 0; idx < len(pots); idx++ {
 		for _, pid := range table.Seats {
 			player := game.Public.Players[pid]
-			if player.TotalBet > taken {
-				pots[idx].Chips += (player.TotalBet - taken)
+			// We can get from (taken) to (max) chips
+			max := pots[idx].BetAmount
+			if (max > player.TotalBet) {
+			  max = player.TotalBet
+			}
+			if max > taken {
+				pots[idx].Chips += max - taken
 
 				if player.State == CALLED || player.State == ALLIN || player.State == BET {
 					pots[idx].Players = append(pots[idx].Players, player)
@@ -614,24 +643,25 @@ func init() {
 		{"DealAllDown", 2, 0},
 		{"ClearBets", 0, 0},
 		{"HoldemBlinds", 0, 0},
-		{"BetRound", 0, 1},
+		{"BetRound", 0, 0},
 		{"CollectPot", 0, 0},
 		{"Burn", 0, 0},
-		{"TexFlop", 0, 0},
+		{"TexFlop", 0, 1},
 		{"ClearBets", 0, 0},
-		{"BetRound", 0, 1},
+		{"BetRound", 0, 0},
 		{"CollectPot", 0, 0},
 		{"Burn", 0, 0},
-		{"TexTurn", 0, 0},
-		{"ClearBets", 0, 1},
-		{"BetRound", 0, 1},
+		{"TexTurn", 0, 1},
+		{"ClearBets", 0, 0},
+		{"BetRound", 0, 0},
 		{"CollectPot", 0, 0},
 		{"Burn", 0, 0},
 		{"TexRiver", 0, 1},
-		{"ClearBets", 0, 1},
-		{"BetRound", 0, 1},
+		{"ClearBets", 0, 0},
+		{"BetRound", 0, 0},
 		{"CollectPot", 0, 0},
 		{"TexWin", 0, 8},
+		{"BustOut", 0, 0},
 		{"NewGame", 0, 0},
 	}
 	GAME_COMMANDS["_foldedwin"] = GameDef {
