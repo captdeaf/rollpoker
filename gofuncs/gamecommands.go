@@ -145,6 +145,11 @@ func (player *Player) TryBet(game *Game, gc *GameCommand) int {
 	// Table current
 	curbet := table.CurBet
 	total := ibet + player.Bet
+	if total == 0 {
+		// Somebody using call as check.
+		fmt.Printf("Call/Check")
+		return player.TryCheck(game, gc)
+	}
 	// Total bet by player:
 	if ibet >= player.Chips {
 		// Player is all-in

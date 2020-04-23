@@ -1,7 +1,5 @@
 BUGS:
 * Bet plaque shows compared to minbet. Bet 50 -> "Raise 0"
-* "Calls with 0" instead of "Checks"
-* Whose turn is it? Show!
 * Show all-in cards instead of hiding until winner is declared.
 * Add All-in cards to log when auto-play is enabled.
 * Add bet amounts to green status div and player state. Use DisplayState?
@@ -10,7 +8,6 @@ TODO:
 * Graying overlay of cards for "Checked" "Called", etc, if you've already
   gone.
 * Show backs of cards, grayed out, for "folded" ?
-* Players need to bust out at end of round if no chips.
 * Auto-checkfold for idle players
 * Disable and discolor Bet Plaque when not able to do anything
 * Pre-check, Pre-fold
@@ -41,3 +38,7 @@ FIXED:
 * Show SB, BB.
 * Bigger Bet buttons & input (touchscreen, for crying out loud)
 * When folded, remove bet plaque and cards
+* All-In didn't chop off player chips at BetAmount. Fixed.
+* Players need to bust out at end of round if no chips.
+* "Calls with 0" instead of "Checks"
+* Whose turn is it? Show!
