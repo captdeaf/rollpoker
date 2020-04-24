@@ -114,8 +114,8 @@ var Table = {
     // TODO: Pick my table out from multiple tables.
     var tableData = data.Tables["table0"];
     var table = $(Table.TABLE({game: data, table:tableData, players: data.Players}));
-    $('#tables').empty();
-    $('#tables').append(table);
+    $('#mytable').empty();
+    $('#mytable').append(table);
     Table.UpdateIndicator(tableData,Poker.PLAYER);
     if (Poker.PLAYER) {
       if (Poker.PLAYER.Hand && Poker.PLAYER.Hand.length > 0) {

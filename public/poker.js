@@ -133,15 +133,15 @@ var Poker = {
 
       Poker.LOGS = db.collection("/public/" + Poker.NAME + "/log")
       Poker.LOGS.orderBy("Timestamp", "desc").limit(30).get().then(function(logs) {
-        Poker.ProcessLogs(logs);
+        Poker.ProcessLogs(logs, false);
         // Then start a tail.
         Poker.LOGS.orderBy("Timestamp", "desc").limit(5).onSnapshot(function(logs) {
-          Poker.ProcessLogs(logs);
+          Poker.ProcessLogs(logs, true);
         });
       });
     }
   },
-  SEEN_LOGS: {},
+  LATEST_SEEN: 0,
   LogCallback: undefined,
   UpdateLog: function(log) {
     console.log(log.Timestamp, log.Message);
@@ -149,18 +149,48 @@ var Poker = {
       Poker.LogCallback(log.Timestamp, log.Message);
     }
   },
-  ProcessLogs: function(logs) {
-    // We get them in an ordered descent
+  ProcessLogs: function(logs, doevents) {
+    // We get them in an ordered descent. Reverse 'em.
     var rev = [];
     logs.forEach(function(log) {
       rev.push(log.data());
     });
     for (var i = rev.length - 1; i >= 0; i--) {
-      if (!Poker.SEEN_LOGS[rev[i].Timestamp]) {
-        Poker.SEEN_LOGS[rev[i].Timestamp] = true
-        Poker.UpdateLog(rev[i]);
+      if (Poker.LATEST_SEEN < rev[i].Timestamp) {
+        Poker.LATEST_SEEN = rev[i].Timestamp;
+        if (rev[i].Message && rev[i].Message != "") {
+          Poker.UpdateLog(rev[i]);
+        } else if (doevents) {
+          var evt = Events[rev[i].EventName];
+          if (evt) {
+            evt.apply(evt, rev[i].Args);
+          } else {
+            console.log("No Events[" + rev[i].EventName + "]!");
+          }
+        }
+      } else {
+        console.log("Seen", rev[i]);
       }
     }
+  },
+  GetMyTable: function() {
+    // TODO: MTTs
+    return "table0";
+  },
+  GetPlayerLocation: function(playerid) {
+    return $("#" + playerid).offset();
+  },
+  GetPlayerSeat: function(playerid) {
+    // returns undefined if not seated at same table as we are watching
+    var mytable = Poker.DATA.Tables[Poker.GetMyTable()]
+    for (var seatname in mytable.Seats) {
+      var pid = mytable.Seats[seatname];
+      if (pid == playerid) {
+        return seatname;
+      }
+    };
+    // Not at this table.
+    return undefined;
   },
 };
 

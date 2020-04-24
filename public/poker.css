@@ -63,6 +63,16 @@
     -webkit-text-stroke-color: black;
   }
 
+  .eventanim {
+    display: inline-block;
+    position: absolute;
+    font-weight: bold;
+    font-size: 24pt;
+    color: gold;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+  }
+
   div.myhand {
     position: absolute;
     display: inline-block;

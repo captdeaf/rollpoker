@@ -85,6 +85,8 @@ type LogItem struct {
 	PlayerId	string
 	Timestamp	int64
 	Message		string
+	EventName	string
+	Args		[]interface{}
 }
 
 type Game struct {
@@ -245,6 +247,21 @@ func FetchGame(name string, tx *firestore.Transaction) *Game {
 	game.Name = name
 	game.TX = tx
 	return &game
+}
+
+func LogEvent(game *Game, name string, fargs ...interface{}) {
+	litem := new(LogItem)
+	litem.Timestamp = time.Now().UnixNano()
+	litem.Message = ""
+	litem.EventName = name
+	litem.Args = fargs
+	lname := fmt.Sprintf("public/%s/log/%d", game.Name, litem.Timestamp)
+	docref := FIRESTORE_CLIENT.Doc(lname)
+	err := game.TX.Set(docref, litem)
+	fmt.Println(litem.Message)
+	if err != nil {
+		fmt.Printf("Error saving LogItem: %v\n", err)
+	}
 }
 
 func LogMessage(game *Game, msg string, fargs ...interface{}) {

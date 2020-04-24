@@ -27,6 +27,7 @@ func (game *Game) Shuffle(tablename string, _ int) bool {
 		"ca", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9", "ct", "cj", "cq", "ck",
 	}
 
+	LogEvent(game, "Shuffle")
 	LogMessage(game, "Shuffling deck.")
 	deckcopy := make([]string, len(DECK))
 	copy(deckcopy, DECK)
@@ -49,6 +50,7 @@ func (game *Game) TexFlop(tablename string, _ int) bool {
 	flop := deck[:3]
 	table.Cards["board"] = flop
 	game.Private.TableDecks[tablename] = deck[3:]
+	LogEvent(game, "Board", flop[0], flop[1], flop[2])
 	LogMessage(game, "Flop: <<%s>>", strings.Join(flop, ">>,<<"))
 	return true
 }
@@ -57,6 +59,7 @@ func (game *Game) TexTurn(tablename string, _ int) bool {
 	table := game.Public.Tables[tablename]
 	deck := game.Private.TableDecks[tablename]
 	table.Cards["board"] = append(table.Cards["board"], deck[0])
+	LogEvent(game, "Board", deck[0])
 	LogMessage(game, "Turn: <<%s>>", deck[0])
 	game.Private.TableDecks[tablename] = deck[1:]
 	return true
@@ -66,6 +69,7 @@ func (game *Game) TexRiver(tablename string, _ int) bool {
 	table := game.Public.Tables[tablename]
 	deck := game.Private.TableDecks[tablename]
 	table.Cards["board"] = append(table.Cards["board"], deck[0])
+	LogEvent(game, "Board", deck[0])
 	LogMessage(game, "River: <<%s>>", deck[0])
 	game.Private.TableDecks[tablename] = deck[1:]
 	return true
@@ -88,7 +92,9 @@ func (game *Game) BustOut(tablename string, _ int) bool {
 	if len(busts) > 0 {
 		sort.Slice(busts, func(i, j int) bool { return busts[i].TotalBet < busts[j].TotalBet })
 		for _, player := range busts {
+			LogEvent(game, "Bust", player.PlayerId, ranking)
 			LogMessage(game, "%s busts out with rank: %d", player.DisplayName, ranking)
+			player.Rank = ranking
 			ranking--
 			player.State = BUSTED
 		}
@@ -101,6 +107,7 @@ func (game *Game) NewGame(tablename string, _ int) bool {
 	table.Dolist = make(GameDef, len(GAME_COMMANDS["texasholdem"]))
 	table.Dealer = GetNextPlayer(game, table, table.Dealer)
 	copy(table.Dolist, GAME_COMMANDS["texasholdem"])
+	LogEvent(game, "Newhand")
 	LogMessage(game, "New Hand")
 	return true
 }
@@ -124,6 +131,7 @@ func (game *Game) DealAllDown(tablename string, count int) bool {
 		}
 	}
 	game.Private.TableDecks[tablename] = deck[idx:]
+	LogEvent(game, "Dealing", count, "DOWN")
 	LogMessage(game, "Dealing %d cards to each player", count)
 
 	return true
@@ -217,6 +225,7 @@ func PayoutPots(game *Game, pots []*Pot, hands []*PlayerHand) {
 				pots[i].Winners = append(pots[i].Winners, player)
 				// We have a winner, show this player's cards.
 				player.Hand = strings.Join(GetHandVals(game, player), "")
+				LogEvent(game, "Win", player.PlayerId, pots[i].Chips, ph.Hand, strings.Join(ph.Cards," "))
 				LogMessage(game, "%s wins the %d-chip pot with %s: <<%s>>",
 						 player.DisplayName, pots[i].Chips,
 						 ph.Hand, strings.Join(ph.Cards, ">> <<"))
@@ -302,6 +311,7 @@ func (game *Game) FoldedWin(tablename string, _ int) bool {
 		return false
 	}
 	player := active[0]
+	LogEvent(game, "Win", player.PlayerId, table.Pot)
 	LogMessage(game, "%s wins %d chips", player.DisplayName, table.Pot)
 	player.Chips += table.Pot
 	player.State = WON

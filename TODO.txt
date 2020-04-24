@@ -8,15 +8,14 @@ TODO:
 * Graying overlay of cards for "Checked" "Called", etc, if you've already
   gone.
 * Show backs of cards, grayed out, for "folded" ?
+* Indicate pre-check and pre-fold somehow.
 * Auto-checkfold for idle players
 * Disable and discolor Bet Plaque when not able to do anything
-* Pre-check, Pre-fold
 * Muck cards or show 'em on loss?
 * Tournament features
 * Blind schedules
 * Pause blinds
 * Ranking list
-* Overlay messages? (Add PlayerId to LogItem)
 * Admin panel: Quit game, return to registry, Kick Player, kickstart game
 * Cash game support
 * Buyin button
@@ -25,6 +24,7 @@ TODO:
   "What was the game I created?"
 
 FIXED:
+* Pre-check, Pre-fold
 * Draggable conflicts w/ safari scrolling: Overflow: auto on dragging div?
 * Buttons don't work on touchscreen devices
 * Disabling "selectable" prevents text boxes from being selected on mobile devices / iOS.
@@ -42,3 +42,5 @@ FIXED:
 * Players need to bust out at end of round if no chips.
 * "Calls with 0" instead of "Checks"
 * Whose turn is it? Show!
+* Overlay messages? (Add PlayerId to LogItem)
+* Events: Triggers for JS and for UI animations.

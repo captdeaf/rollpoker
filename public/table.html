@@ -19,7 +19,6 @@
     <input type="text" name="adminpw" placeholder="Admin Password">
   </script>
   <script type="text/template" id="maintable">
-    <div class="pokertable">
       <div class="cardsettings" id="cardsettings"></div>
       <div class="tableopts" id="tableopts">
         <% if (game.CurrentBlinds) { %>
@@ -38,7 +37,7 @@
         <div class="tinfo">Pot: <tt><%= table.Pot %></tt></div>
       </div>
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
-      <div class="playerinfo <%= seat %> <%= player.State %>">
+      <div id="<%= player.PlayerId %>" class="playerinfo <%= seat %> <%= player.State %>">
         <% if (player.PlayerId == table.Seats[table.Dealer]) { %>
           <div class="dealerbutton"></div>
         <% } %>
@@ -81,10 +80,9 @@
         </div>
       <% } %>
     <% } %>
-    </div>
   </script>
   <script type="text/template" id="tableview">
-    <div id="tables"></div>
+    <div id="tables"><div id="mytable" class="pokertable"></div></div>
     <div id="logscreen"></div>
     <% if (Poker.PLAYER && Poker.PLAYER.State != "BUSTED") { %>
       <div id="lower">

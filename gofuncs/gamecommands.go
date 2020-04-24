@@ -103,6 +103,7 @@ func (player *Player) TryCheck(game *Game, gc *GameCommand) int {
 
 	// Maximum is their amount of chips. (if chips < min, min = chips)
 	DoCall(game, tablename, gc.PlayerId, 0)
+	LogEvent(game, "Call", player.PlayerId, 0, "CHECK")
 	LogMessage(game, "%s checks", player.DisplayName)
 	return SAVE|RUN
 }
@@ -112,6 +113,7 @@ func (player *Player) TryFold(game *Game, gc *GameCommand) int {
 	tablename := game.TableForPlayer(player)
 
 	DoFold(game, tablename, gc.PlayerId)
+	LogEvent(game, "Fold", player.PlayerId, "FOLD")
 	LogMessage(game, "%s folds", player.DisplayName)
 	return SAVE|RUN
 }
@@ -128,6 +130,11 @@ func (player *Player) TryCall(game *Game, gc *GameCommand) int {
 
 	// Maximum is their amount of chips. (if chips < min, min = chips)
 	DoCall(game, tablename, gc.PlayerId, remaining)
+	if remaining == 0 {
+		LogEvent(game, "Call", player.PlayerId, remaining, "CHECK")
+	} else {
+		LogEvent(game, "Call", player.PlayerId, remaining, "CALL")
+	}
 	LogMessage(game, "%s calls for %d", player.DisplayName, remaining)
 	return SAVE|RUN
 }
@@ -157,11 +164,13 @@ func (player *Player) TryBet(game *Game, gc *GameCommand) int {
 		total = ibet + player.Bet
 		if total <= curbet {
 			fmt.Printf("Allin call\n")
+			LogEvent(game, "Call", player.PlayerId, player.Chips, "ALL-IN")
 			LogMessage(game, "%s goes all-in with %d", player.DisplayName, player.Chips)
 			DoCall(game, tablename, gc.PlayerId, player.Chips)
 			return SAVE|RUN
 		}
 		fmt.Printf("Allin bet\n")
+		LogEvent(game, "Bet", player.PlayerId, player.Chips, "ALL-IN")
 		LogMessage(game, "%s goes all-in with %d", player.DisplayName, player.Chips)
 		// Else fall through to DoBet
 	} else {
@@ -170,6 +179,7 @@ func (player *Player) TryBet(game *Game, gc *GameCommand) int {
 			fmt.Printf("Call")
 			// Call or Check
 			DoCall(game, tablename, gc.PlayerId, ibet)
+			LogEvent(game, "Call", player.PlayerId, ibet, "CALL")
 			LogMessage(game, "%s calls with %d", player.DisplayName, ibet)
 			return SAVE|RUN
 		}
@@ -180,8 +190,10 @@ func (player *Player) TryBet(game *Game, gc *GameCommand) int {
 			return ERR
 		}
 		if table.CurBet > 0 {
+			LogEvent(game, "Bet", player.PlayerId, total - table.CurBet, "RAISE")
 			LogMessage(game, "%s raises by %d", player.DisplayName, total - table.CurBet)
 		} else {
+			LogEvent(game, "Bet", player.PlayerId, total, "BET")
 			LogMessage(game, "%s bets %d", player.DisplayName, total)
 		}
 	}
