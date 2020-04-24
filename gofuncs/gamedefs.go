@@ -74,6 +74,10 @@ func (game *Game) TexRiver(tablename string, _ int) bool {
 func (game *Game) BustOut(tablename string, _ int) bool {
 	table := game.Public.Tables[tablename]
 	busts := make([]*Player, 0)
+	ranking := 0
+	for _, table := range game.Public.Tables {
+		ranking += len(table.Seats)
+	}
 	for seat, pid := range table.Seats {
 		player := game.Public.Players[pid]
 		if player.Chips == 0 {
@@ -82,13 +86,10 @@ func (game *Game) BustOut(tablename string, _ int) bool {
 		}
 	}
 	if len(busts) > 0 {
-		ranking := 0
-		for _, table := range game.Public.Tables {
-			ranking += len(table.Seats)
-		}
 		sort.Slice(busts, func(i, j int) bool { return busts[i].TotalBet < busts[j].TotalBet })
 		for _, player := range busts {
 			LogMessage(game, "%s busts out with rank: %d", player.DisplayName, ranking)
+			ranking--
 			player.State = BUSTED
 		}
 	}

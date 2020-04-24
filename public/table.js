@@ -24,27 +24,18 @@ var Table = {
   },
   Start: function(doc) {
     $('body').html(Table.VIEW());
-    $('.gamecommand').on("click touchstart", function(evt) {
-      var me = $(this);
-      var dat = me.data();
-      for (var i in dat) {
-        dat[i] = "" + dat[i];
-      }
-      console.log(me.attr('name'), dat);
-      Poker.SendCommand(me.attr('name'), dat);
-    });
     if (Poker.PLAYER) {
       var lastDrop = 0;
       Table.SetDraggable($('#myhand'), {vert: true}, function(el, data) {
-        console.log("Dropped:");
-        console.log(data);
         if (data.yd < -150) {
           // Swiped the cards up. Fold.
-          Poker.SendCommand("Fold", {});
-        } else if (data.yd < 4 && data.yd > -4 && data.xd > -4 && data.xd < 4 && (Date.now() - lastDrop) < 700) {
-          Poker.SendCommand("Check", {});
-        } else {
-          lastDrop = Date.now();
+          Table.QueueCommand("Fold", {}, false);
+        } else if (data.yd < 4 && data.yd > -4 && data.xd > -4 && data.xd < 4) {
+          if ((Date.now() - lastDrop) < 700) {
+            Table.QueueCommand("Check", {}, true);
+          } else {
+            lastDrop = Date.now();
+          }
         }
       });
       var bp = $('#betplaque');
@@ -56,7 +47,7 @@ var Table = {
           // Swiped the bet up to table area. Call, Bet or Raise.
           // Force string of int.
           var bet = "" + parseInt(inp.val());
-          Poker.SendCommand("Bet", {amount: bet});
+          Table.QueueCommand("Bet", {amount: bet}, true);
         }
       });
       var inp = bp.find('input.betp');
@@ -128,11 +119,12 @@ var Table = {
     Table.UpdateIndicator(tableData,Poker.PLAYER);
     if (Poker.PLAYER) {
       if (Poker.PLAYER.Hand && Poker.PLAYER.Hand.length > 0) {
-        if (Poker.PLAYER.Status != Table.LAST_STATUS) {
-          if (Poker.PLAYER.Status == "TURN") {
+        if (Poker.PLAYER.State != Table.LAST_PLAYER_STATE) {
+          Table.LAST_PLAYER_STATE = Poker.PLAYER.State
+          if (Poker.PLAYER.State == "TURN") {
+            console.log("Trying OnTurnStart");
             Table.OnTurnStart();
           }
-          Table.LAST_STATUS = Poker.PLAYER.Status
         }
         if (!Table.IsSameHand(Poker.PLAYER.Hand, Table.LASTHAND)) {
           Table.LASTHAND = Poker.PLAYER.Hand;

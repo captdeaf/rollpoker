@@ -86,7 +86,7 @@
   <script type="text/template" id="tableview">
     <div id="tables"></div>
     <div id="logscreen"></div>
-    <% if (Poker.PLAYER) { %>
+    <% if (Poker.PLAYER && Poker.PLAYER.State != "BUSTED") { %>
       <div id="lower">
         <div id="myhand" class="grow myhand"></div>
         <div id="indicator" class="indicator"></div><br>
