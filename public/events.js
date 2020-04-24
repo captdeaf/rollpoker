@@ -31,8 +31,16 @@ var Events = {
   },
   Bet: function(playerid, amt, opt) {
     var off = Poker.GetPlayerLocation(playerid);
+    Table.MaybeClearQueue();
     if (off) {
       Helpers.RaiseText(off, opt + " " + amt);
+    }
+  },
+  Win: function(playerid, amt, handname, handcards) {
+    var off = Poker.GetPlayerLocation(playerid);
+    Table.QueueCancel();
+    if (off) {
+      Helpers.RaiseText(off, "Won " + amt);
     }
   }
 };

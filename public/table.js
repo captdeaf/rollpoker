@@ -15,9 +15,40 @@ var Table = {
     };
     if (Poker.PLAYER.State == "TURN") {
       Table.PopCommand();
+    } else {
+      Table.Indicate("Queued: " + cmd, {canCancel: true});
     }
   },
+  MaybeClearQueue: function() {
+    // Called on Bets. If we have a queued command that isn't Fold,
+    // then cancel it.
+    if (Table.QueuedCommand && Table.QueuedCommand.cmd != "Fold") {
+      Table.QueueCancel();
+    }
+  },
+  QueueCancel: function() {
+    Table.QueuedCommand = undefined;
+    Table.ClearIndicator();
+  },
+  INDICATING: undefined,
+  Indicate: function(message, opts) {
+    if (opts.canCancel) {
+      $("#cancelindicate").show();
+    } else {
+      $("#cancelindicate").hide();
+    }
+    $("#indication").text(message);
+    $("#indicatorbar").show();
+    Table.INDICATING = message;
+  },
+  ClearIndicator: function() {
+    Table.INDICATING = undefined;
+    $("#indicatorbar").hide();
+  },
   PopCommand: function() {
+    if (Table.INDICATING) {
+      Table.ClearIndicator();
+    }
     var qd = Table.QueuedCommand;
     Table.QueuedCommand = undefined;
     Poker.SendCommand(qd.cmd, qd.args);
@@ -25,8 +56,12 @@ var Table = {
   Start: function(doc) {
     $('body').html(Table.VIEW());
     if (Poker.PLAYER) {
+      function canStart() {
+        if (Table.QueuedCommand) return false;
+        return Poker.PLAYER.State == "TURN" || Poker.PLAYER.State == "WAITING"
+      }
       var lastDrop = 0;
-      Table.SetDraggable($('#myhand'), {vert: true}, function(el, data) {
+      Table.SetDraggable($('#myhand'), {vert: true, canStart: canStart}, function(el, data) {
         if (data.yd < -150) {
           // Swiped the cards up. Fold.
           Table.QueueCommand("Fold", {}, false);
@@ -41,7 +76,7 @@ var Table = {
       var bp = $('#betplaque');
       bp.empty();
       bp.append($(Table.BETVIEW({player: Poker.PLAYER})));
-      Table.SetDraggable($('#betplaque'), {vert: true}, function(el, data) {
+      Table.SetDraggable($('#betplaque'), {vert: true, canStart: canStart}, function(el, data) {
         if (data.yd < -150) {
           console.log("Trying to bet");
           // Swiped the bet up to table area. Call, Bet or Raise.
@@ -97,6 +132,10 @@ var Table = {
       inp.on("click touchstart", function() {
         inp.focus();
       });
+      $("#cancelindicate").on("click touchstart", function() {
+        Table.QueueCancel();
+        Table.ClearIndicator();
+      });
     }
     Poker.LogCallback = Table.LogUpdate;
   },
@@ -124,6 +163,8 @@ var Table = {
           if (Poker.PLAYER.State == "TURN") {
             console.log("Trying OnTurnStart");
             Table.OnTurnStart();
+          } else {
+            Table.ClearIndicator();
           }
         }
         if (!Table.IsSameHand(Poker.PLAYER.Hand, Table.LASTHAND)) {
@@ -138,6 +179,8 @@ var Table = {
         $('#myhand').hide();
         $('#betplaque').hide();
       }
+    } else {
+      Table.Indicate("You Folded");
     }
   },
   UpdateIndicator: function(table, player) {
@@ -186,6 +229,9 @@ var Table = {
   SetDraggable: function(jqe, opts, cb, cbpress) {
     function handle_mousedown(e){
       if (window.dragging != undefined) return;
+      if (opts.canStart) {
+        if (!opts.canStart()) return;
+      }
       window.dragging = true;
       var origX = e.pageX;
       var origY = e.pageY;

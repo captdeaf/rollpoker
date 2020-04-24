@@ -8,6 +8,7 @@
     left: -30px;
     height: 40px;
     width: 40px;
+    z-index: 80;
   }
 
   div.card {
@@ -332,6 +333,22 @@
     height: 50px;
     width: 80px;
     z-index: 10;
+  }
+
+  div#indicatorbar {
+    position: absolute;
+    display: block;
+    width: 600px;
+    text-align: center;
+    color: white;
+    vertical-align: middle;
+    font-weight: bold;
+    padding-top: 3em;
+    padding-bottom: 3em;
+    top: 380px;
+    left: 0%;
+    background-color: #666666dd;
+    z-index: 100;
   }
 
   div.tables {
