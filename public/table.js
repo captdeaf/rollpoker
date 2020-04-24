@@ -155,7 +155,7 @@ var Table = {
     var table = $(Table.TABLE({game: data, table:tableData, players: data.Players}));
     $('#mytable').empty();
     $('#mytable').append(table);
-    Table.UpdateIndicator(tableData,Poker.PLAYER);
+    Table.ShowPlayerState(tableData,Poker.PLAYER);
     if (Poker.PLAYER) {
       if (Poker.PLAYER.Hand && Poker.PLAYER.Hand.length > 0) {
         if (Poker.PLAYER.State != Table.LAST_PLAYER_STATE) {
@@ -172,18 +172,17 @@ var Table = {
           Table.UpdateHand(Poker.PLAYER);
         }
         Table.UpdateBetPlaque(tableData,Poker.PLAYER);
-        Table.UpdateIndicator(tableData,Poker.PLAYER);
+        Table.ShowPlayerState(tableData,Poker.PLAYER);
         $('#myhand').show();
         $('#betplaque').show();
       } else {
         $('#myhand').hide();
         $('#betplaque').hide();
+        Table.Indicate("You Folded");
       }
-    } else {
-      Table.Indicate("You Folded");
     }
   },
-  UpdateIndicator: function(table, player) {
+  ShowPlayerState: function(table, player) {
     $('#indicator').text(Table.GetIndicatorText(table, player));
   },
   GetIndicatorText: function(table, player) {
