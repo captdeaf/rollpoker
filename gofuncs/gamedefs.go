@@ -303,7 +303,8 @@ func (game *Game) FoldedWin(tablename string, _ int) bool {
 
 		if player.State == ALLIN || player.State == WAITING || player.State == BET || player.State == CALLED {
 			active = append(active, player)
-			player.State = WON
+		} else {
+			player.State = FOLDED
 		}
 	}
 	if len(active) != 1 {
@@ -398,8 +399,9 @@ func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
 	player.Chips -= amt
 	player.Bet += amt
 	player.TotalBet += amt
-	if amt > table.MinBet {
-		table.MinBet = amt
+	diff := amt - table.CurBet
+	if diff > table.MinBet {
+		table.MinBet = diff
 	}
 	if player.Bet > table.CurBet {
 		table.CurBet = player.Bet

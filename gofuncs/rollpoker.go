@@ -423,7 +423,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 			SaveGame(game, tx)
 		}
 		if dorun {
-			go RunCommands(game.Name, game.TableForPlayer(player), 1)
+			go RunCommands(game.Name, game.TableForPlayer(player), 0)
 		}
 		return nil
 	})

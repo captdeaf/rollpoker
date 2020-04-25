@@ -5,6 +5,7 @@ var Table = {
     VIEW: "#tableview",
     HANDVIEW: "#myhandview",
     BETVIEW: "#betplaqueview",
+    MENU: "#menucontents",
   },
   QueuedCommand: undefined,
   QueueCommand: function(cmd, args, clearonbet) {
@@ -32,7 +33,7 @@ var Table = {
   },
   INDICATING: undefined,
   Indicate: function(message, opts) {
-    if (opts.canCancel) {
+    if (opts && opts.canCancel) {
       $("#cancelindicate").show();
     } else {
       $("#cancelindicate").hide();
@@ -89,8 +90,6 @@ var Table = {
       var chipv = bp.find('.betchips');
       var tt = bp.find('.betdesc');
       inp.change(function(val) {
-        console.log("Huh?");
-        
         var min = Table.CURBET - Poker.PLAYER.Bet;
         inp.val(parseInt(inp.val()));
         if (inp.val() < min) {
@@ -136,10 +135,32 @@ var Table = {
         Table.QueueCancel();
         Table.ClearIndicator();
       });
+      $("#cardsettings").on("click touchstart", function() {
+        Table.ShowMenu();
+      });
     }
     Poker.LogCallback = Table.LogUpdate;
   },
+  ShowMenu: function() {
+    var menu = $("#menu");
+    menu.html(Table.MENU({data: Poker.DATA, player: Poker.PLAYER}));
+    menu.find("#notifications").on("click touchstart", function() {
+      Notification.requestPermission();
+    });
+    menu.find("#closemenu").on("click touchstart", function() {
+      menu.hide();
+    });
+    menu.show();
+  },
   OnTurnStart: function() {
+    if (window.Notification && window.Notification.permission == "granted") {
+      var notif = new window.Notification("Your turn");
+      notif.onclick = function() {
+        window.focus();
+        notif.close();
+      }
+      setTimeout(function() {notif.close();}, 4000);
+    }
     if (Table.QueuedCommand) {
       setTimeout(function() { Table.PopCommand(); }, 1000);
     }
@@ -158,8 +179,8 @@ var Table = {
     Table.ShowPlayerState(tableData,Poker.PLAYER);
     if (Poker.PLAYER) {
       if (Poker.PLAYER.Hand && Poker.PLAYER.Hand.length > 0) {
+        console.log("State: " + Poker.PLAYER.State);
         if (Poker.PLAYER.State != Table.LAST_PLAYER_STATE) {
-          Table.LAST_PLAYER_STATE = Poker.PLAYER.State
           if (Poker.PLAYER.State == "TURN") {
             console.log("Trying OnTurnStart");
             Table.OnTurnStart();
@@ -180,6 +201,7 @@ var Table = {
         $('#betplaque').hide();
         Table.Indicate("You Folded");
       }
+      Table.LAST_PLAYER_STATE = Poker.PLAYER.State
     }
   },
   ShowPlayerState: function(table, player) {

@@ -67,9 +67,10 @@
   .eventanim {
     display: inline-block;
     position: absolute;
-    font-weight: bold;
+    font-weight: 900;
     font-size: 24pt;
     color: gold;
+    font-family: "Courier New", Courier, monospace;
     -webkit-text-stroke-width: 1px;
     -webkit-text-stroke-color: black;
   }
@@ -111,6 +112,7 @@
     position: absolute;
     left: 650px;
     top: 50px;
+    color: white;
   }
 
   div.betplaque {
@@ -311,7 +313,6 @@
 
   div.pokertable {
     position: relative;
-    background-image: url('/feltbg.png');
     height: 600px;
     width: 1000px;
     transform-origin: 0 0;
@@ -359,4 +360,25 @@
     display: block;
     background-color: gray;
     padding: 1em;
+  }
+
+  div#menu {
+    position: absolute;
+    display: block;
+    top: 20px;
+    left: 20px;
+    width: 300px;
+    background-color: #000055ee;
+    color: white;
+    padding: 10px;
+    height: 60px;
+    z-index: 200;
+    display: none;
+  }
+  div#closemenu {
+    padding-bottom: 10px;
+  }
+
+  body {
+    background-color: #000022ff;
   }

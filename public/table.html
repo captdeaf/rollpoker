@@ -19,7 +19,6 @@
     <input type="text" name="adminpw" placeholder="Admin Password">
   </script>
   <script type="text/template" id="maintable">
-      <div class="cardsettings" id="cardsettings"></div>
       <div class="tableopts" id="tableopts">
         <% if (game.CurrentBlinds) { %>
           <% if (game.CurrentBlinds[0]) { %>
@@ -81,8 +80,19 @@
       <% } %>
     <% } %>
   </script>
+  <script type="text/template" id="menucontents">
+    <div id="closemenu"><tt>X</tt> GAME MENU:</div>
+    <label>Name: <input type="text" class="menutext" placeholder="Display Name" name="DisplayName" value="<%= Poker.PLAYER.DisplayName %>"></label><br>
+    <% if (window.Notification && window.Notification.permission != "granted") { %>
+      <button id="notifications">Enable Notifications</button>
+    <% } %>
+  </script>
   <script type="text/template" id="tableview">
-    <div id="tables"><div id="mytable" class="pokertable"></div></div>
+    <div id="tables">
+      <div id="mytable" class="pokertable"></div>
+      <div class="cardsettings" id="cardsettings"></div>
+      <div id="menu"></div>
+    </div>
     <div id="logscreen"></div>
     <% if (Poker.PLAYER && Poker.PLAYER.State != "BUSTED") { %>
       <div id="lower">
