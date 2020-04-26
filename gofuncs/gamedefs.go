@@ -97,6 +97,7 @@ func (game *Game) BustOut(tablename string, _ int) bool {
 			player.Rank = ranking
 			ranking--
 			player.State = BUSTED
+			player.DisplayState = "Busted out"
 		}
 	}
 	return true
@@ -231,7 +232,7 @@ func PayoutPots(game *Game, pots []*Pot, hands []*PlayerHand) {
 				LogMessage(game, "%s wins the %d-chip pot with %s: <<%s>>",
 						 player.DisplayName, pots[i].Chips,
 						 ph.Hand, strings.Join(ph.Cards, ">> <<"))
-				player.State = idScore[player.PlayerId].Hand
+				player.DisplayState = idScore[player.PlayerId].Hand
 			}
 		}
 	}
@@ -307,6 +308,7 @@ func (game *Game) FoldedWin(tablename string, _ int) bool {
 			active = append(active, player)
 		} else {
 			player.State = FOLDED
+			player.DisplayState = "Folded"
 		}
 	}
 	if len(active) != 1 {
@@ -318,6 +320,7 @@ func (game *Game) FoldedWin(tablename string, _ int) bool {
 	LogMessage(game, "%s wins %d chips", player.DisplayName, table.Pot)
 	player.Chips += table.Pot
 	player.State = WON
+	player.DisplayState = "Winner"
 	table.Pot = 0
 	return true
 }
@@ -330,6 +333,7 @@ func (game *Game) ResetHand(tablename string, _ int) bool {
 		game.Public.Players[playerid].TotalBet = 0
 		game.Public.Players[playerid].Hand = ""
 		game.Public.Players[playerid].State = WAITING
+		game.Public.Players[playerid].DisplayState = ""
 		table.Cards = make(map[string][]string)
 	}
 	return true
@@ -350,15 +354,16 @@ func (game *Game) TableForPlayer(player *Player) string {
 	return game.TableFor(player.PlayerId)
 }
 
-func DoChoose(game *Game, tablename, playerid, state string) {
+func DoChoose(game *Game, tablename, playerid, state, dstate string) {
 	player := game.Public.Players[playerid]
 	player.State = state
+	player.DisplayState = dstate
 }
 
 func DoFold(game *Game, tablename, playerid string) {
 	player := game.Public.Players[playerid]
 	player.Hand = ""
-	DoChoose(game, tablename, playerid, FOLDED)
+	DoChoose(game, tablename, playerid, FOLDED, "Folded")
 }
 
 func DoCall(game *Game, tablename, playerid string, amt int) {
@@ -367,7 +372,11 @@ func DoCall(game *Game, tablename, playerid string, amt int) {
 	if player.Chips <= amt {
 		amt = player.Chips
 	}
-	DoChoose(game, tablename, playerid, CALLED)
+	if amt == 0 {
+		DoChoose(game, tablename, playerid, CALLED, "Checked")
+	} else {
+		DoChoose(game, tablename, playerid, CALLED, "Called")
+	}
 	player.Chips -= amt
 	player.Bet += amt
 	player.TotalBet += amt
@@ -387,6 +396,7 @@ func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
 					game.Public.Players[pid].State = ALLIN
 				} else {
 					game.Public.Players[pid].State = WAITING
+					// No change to other players' display states.
 				}
 			}
 		}
@@ -396,7 +406,7 @@ func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
 	}
 	if !auto {
 		// auto is true for blinds
-		DoChoose(game, tablename, playerid, BET)
+		DoChoose(game, tablename, playerid, BET, "Bet")
 	}
 	player.Chips -= amt
 	player.Bet += amt
@@ -410,6 +420,9 @@ func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
 	}
 	if auto && player.Chips <= 0 {
 		player.State = ALLIN
+	}
+	if player.Chips == 0 {
+		player.DisplayState = "All-In"
 	}
 }
 
@@ -445,6 +458,7 @@ func (game *Game) ClearBets(tablename string, _ int) bool {
 		if player.State == CALLED || player.State == BET {
 			if player.Chips == 0 {
 				player.State = ALLIN
+				player.DisplayState = "All-In"
 			} else {
 				player.State = WAITING
 			}
@@ -523,6 +537,7 @@ func (game *Game) BetRound(tablename string, _ int) bool {
 		player := game.Public.Players[pid]
 		if player.State == WAITING {
 			player.State = TURN
+			player.DisplayState = "Betting"
 			return false
 		}
 	}

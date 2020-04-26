@@ -37,20 +37,6 @@
       </div>
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
       <div id="<%= player.PlayerId %>" class="playerinfo <%= seat %> <%= player.State %>">
-        <% if (player.PlayerId == table.Seats[table.Dealer]) { %>
-          <div class="dealerbutton"></div>
-        <% } %>
-        <div class="playername"><%= player.DisplayName %><tt class="cash"><%= player.Chips %></tt></div>
-        <div class="playerpiles"><%= Table.ChipStack(player.Chips) %></div>
-        <div class="playerstate">
-          <% if (player.State == "TURN") { %>
-            BETTING
-          <% } else if (player.State == "CALLED" && player.Bet == 0) { %>
-            CHECKED
-          <% } else { %>
-            <%= player.State %>
-          <% } %>
-        </div>
         <div class="playerhand hand">
         <% if (player.PlayerId == Poker.PLAYER_ID) { %>
           <% _.each(Table.DecryptMyHand(player.Hand), function(cardval) { %>
@@ -61,6 +47,15 @@
             <div class="card <%= cardval %>"></div>
           <% }); %>
         <% } %>
+        </div>
+        <% if (player.PlayerId == table.Seats[table.Dealer]) { %>
+          <div class="dealerbutton"></div>
+        <% } %>
+        <div class="playerdata">
+        <div class="playername"><%= player.DisplayName %><tt class="cash"><%= player.Chips %></tt></div>
+        <div class="playerstate">
+          <%= player.DisplayState %>
+        </div>
         </div>
       </div>
       <% if (player.Bet > 0) { %>

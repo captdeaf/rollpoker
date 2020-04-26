@@ -208,6 +208,7 @@ var Table = {
     $('#indicator').text(Table.GetIndicatorText(table, player));
   },
   GetIndicatorText: function(table, player) {
+    if (!player) return "Spectating";
     if (player.State == "TURN") {
       return "Your Turn";
     } else {
