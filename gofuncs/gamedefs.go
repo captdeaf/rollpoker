@@ -155,12 +155,14 @@ type PlayerHand struct {
 func MakePots(game *Game, table *TableState) []*Pot {
 	stillins := make([]*Player, 0)
 	seenpots := make(map[int]bool)
+	table.Pot = 0
 	for _, pid := range table.Seats {
 		player := game.Public.Players[pid]
 		if player.State != FOLDED {
 			stillins = append(stillins, player)
 			seenpots[player.TotalBet] = true
 		}
+		player.Bet = 0
 	}
 	fmt.Printf("# of seenpots: %d\n", len(seenpots))
 	pots, idx := make([]*Pot, len(seenpots)), 0
@@ -619,6 +621,11 @@ func RunCommandsTransaction(gamename string, tablename string) time.Duration {
 
 		for {
 			ret = RunCommandInTransaction(game, tablename)
+			sanity := CheckGameSanity(game, ret >= 0)
+			if sanity != "" {
+				panic(sanity)
+			}
+
 			if ret != 0 {
 				break
 			}

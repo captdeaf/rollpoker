@@ -294,6 +294,42 @@ func SaveGame(game *Game, tx *firestore.Transaction) {
 	fmt.Println("Saved", game.Name)
 }
 
+func CheckGameSanity(game *Game, hasCommandWaiting bool) string {
+	totalChips := 0
+	for _, table := range game.Public.Tables {
+		turncount := 0
+		betcount := 0
+		totalChips += table.Pot
+		for _, pid := range table.Seats {
+			player := game.Public.Players[pid]
+			if player.State == TURN {
+				turncount += 1
+			}
+			if player.State == BET {
+				betcount += 1
+			}
+			totalChips += player.Bet
+			totalChips += player.Chips
+		}
+		if turncount > 1 {
+			return "Multiple players at one table have TURN"
+		}
+		if betcount > 1 {
+			return "Multiple players at one table have BET"
+		}
+		if turncount != 1 && !hasCommandWaiting {
+			return "No TURN or Command going??"
+		}
+	}
+	expectedChips := len(game.Public.Players) * game.Private.OrigState.StartingChips
+
+	if totalChips != expectedChips {
+		return "Chip count mismatch!"
+	}
+
+	return ""
+}
+
 type StateResponse struct {
 	Name	string
 	GameState	*Game
@@ -419,11 +455,16 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		} else {
 			fmt.Fprintf(w, "success")
 		}
-		if dosave {
-			SaveGame(game, tx)
-		}
-		if dorun {
-			go RunCommands(game.Name, game.TableForPlayer(player), 0)
+		sanity := CheckGameSanity(game, dorun || gc.Command == "StartGame")
+		if sanity == "" {
+			if dosave {
+				SaveGame(game, tx)
+			}
+			if dorun {
+				go RunCommands(game.Name, game.TableForPlayer(player), 0)
+			}
+		} else {
+			panic(sanity)
 		}
 		return nil
 	})
