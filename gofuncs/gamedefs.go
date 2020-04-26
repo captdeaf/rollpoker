@@ -433,10 +433,17 @@ func (game *Game) HoldemBlinds(tablename string, _ int) bool {
 	table.Pot = 0
 	order := GetNextPlayers(game, table, table.Dealer)
 	if len(order) < 2 { return false }
+	names := []string{"(small blind)", "(big blind)", "(blind)"}
 	for idx, seat := range order {
 		playerid := table.Seats[seat]
 		if idx < len(game.Public.CurrentBlinds) {
 			// DoBet sets ALLIN if needed
+			player := game.Public.Players[playerid]
+			if idx < len(names) {
+				player.DisplayState = names[idx]
+			} else {
+				player.DisplayState = names[len(names)-1]
+			}
 			DoBet(game, tablename, playerid, game.Public.CurrentBlinds[idx], true)
 		} else {
 			break
