@@ -97,14 +97,14 @@ func (player *Player) TryCheck(game *Game, gc *GameCommand) int {
 	tablename := game.TableForPlayer(player)
 	table := game.Public.Tables[tablename]
 
-	if table.CurBet != player.Bet {
+	remaining := table.CurBet - player.Bet
+	if remaining > 0 {
 		return ERR
 	}
 
-	// Maximum is their amount of chips. (if chips < min, min = chips)
 	DoCall(game, tablename, gc.PlayerId, 0)
-	LogEvent(game, "Call", player.PlayerId, 0, "CHECK")
-	LogMessage(game, "%s checks", player.DisplayName)
+	LogEvent(game, "Call", player.PlayerId, remaining, "CHECK")
+	LogMessage(game, "%s checks", player.DisplayName, remaining)
 	return SAVE|RUN
 }
 
@@ -132,10 +132,11 @@ func (player *Player) TryCall(game *Game, gc *GameCommand) int {
 	DoCall(game, tablename, gc.PlayerId, remaining)
 	if remaining == 0 {
 		LogEvent(game, "Call", player.PlayerId, remaining, "CHECK")
+		LogMessage(game, "%s checks", player.DisplayName)
 	} else {
 		LogEvent(game, "Call", player.PlayerId, remaining, "CALL")
+		LogMessage(game, "%s calls for %d", player.DisplayName, remaining)
 	}
-	LogMessage(game, "%s calls for %d", player.DisplayName, remaining)
 	return SAVE|RUN
 }
 

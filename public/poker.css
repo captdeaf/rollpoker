@@ -4,8 +4,8 @@
     background-image: url('/dealerbutton.png');
     background-repeat: no-repeat;
     background-size: 40px 40px;
-    top: -30px;
-    left: -30px;
+    bottom: -30px;
+    left: -20px;
     height: 40px;
     width: 40px;
     z-index: 80;
@@ -198,21 +198,29 @@
     left: 0px;
     bottom: 0px;
     width: 220px;
-    background-color: #ffffffdd;
+    background-color: #ffff00dd;
     border: 3px solid black;
     border-radius: 10px;
   }
 
   div.playerdata.TURN {
-    background-color: #ffff00dd;
+    background-color: #ffffffdd;
   }
 
   div.playerdata.BET {
-    background-color: #ffccccdd;
+    background-color: #ffaaaadd;
   }
 
   div.playerdata.WAITING {
-    background-color: #ccffccdd;
+    background-color: #bbbbbbdd;
+  }
+
+  div.playerdata.ALLIN {
+    background-color: #aa6666dd;
+  }
+
+  div.playerdata.FOLDED {
+    background-color: #666666dd;
   }
 
   div.playername {
@@ -389,4 +397,5 @@
 
   body {
     background-color: #000022ff;
+    color: white;
   }

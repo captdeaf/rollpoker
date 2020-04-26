@@ -461,6 +461,7 @@ func (game *Game) ClearBets(tablename string, _ int) bool {
 				player.DisplayState = "All-In"
 			} else {
 				player.State = WAITING
+				player.DisplayState = ""
 			}
 		}
 	}

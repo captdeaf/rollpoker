@@ -51,7 +51,7 @@
         <% if (player.PlayerId == table.Seats[table.Dealer]) { %>
           <div class="dealerbutton"></div>
         <% } %>
-        <div class="playerdata">
+        <div class="playerdata <%= player.State %>">
         <div class="playername"><%= player.DisplayName %><tt class="cash"><%= player.Chips %></tt></div>
         <div class="playerstate">
           <%= player.DisplayState %>
@@ -85,8 +85,10 @@
   <script type="text/template" id="tableview">
     <div id="tables">
       <div id="mytable" class="pokertable"></div>
+      <% if (Poker.PLAYER) { %>
       <div class="cardsettings" id="cardsettings"></div>
       <div id="menu"></div>
+      <% } %>
     </div>
     <div id="logscreen"></div>
     <% if (Poker.PLAYER && Poker.PLAYER.State != "BUSTED") { %>

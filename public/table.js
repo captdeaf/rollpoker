@@ -135,9 +135,7 @@ var Table = {
         Table.QueueCancel();
         Table.ClearIndicator();
       });
-      $("#cardsettings").on("click touchstart", function() {
-        Table.ShowMenu();
-      });
+      $("#cardsettings").on("click touchstart", Table.ShowMenu);
     }
     Poker.LogCallback = Table.LogUpdate;
   },
@@ -166,6 +164,7 @@ var Table = {
     }
   },
   CHIP_VALS: "",
+  CUR_BET: -1,
   Update: function(data) {
     if (data.GameSettings.ChipValues != Table.CHIP_VALS) {
       Table.UpdateChips(data.GameSettings.ChipValues);
@@ -180,6 +179,12 @@ var Table = {
     if (Poker.PLAYER) {
       if (Poker.PLAYER.Hand && Poker.PLAYER.Hand.length > 0) {
         console.log("State: " + Poker.PLAYER.State);
+        if (!Table.IsSameHand(Poker.PLAYER.Hand, Table.LASTHAND)) {
+          Table.CUR_BET = -1;
+          Table.LASTHAND = Poker.PLAYER.Hand;
+          Table.UpdateHand(Poker.PLAYER);
+          Table.ClearIndicator();
+        }
         if (Poker.PLAYER.State != Table.LAST_PLAYER_STATE) {
           if (Poker.PLAYER.State == "TURN") {
             console.log("Trying OnTurnStart");
@@ -188,18 +193,17 @@ var Table = {
             Table.ClearIndicator();
           }
         }
-        if (!Table.IsSameHand(Poker.PLAYER.Hand, Table.LASTHAND)) {
-          Table.LASTHAND = Poker.PLAYER.Hand;
-          Table.UpdateHand(Poker.PLAYER);
+        if (tableData.CurBet != Table.CUR_BET) {
+          Table.CUR_BET = tableData.CurBet;
+          Table.UpdateBetPlaque(tableData,Poker.PLAYER);
         }
-        Table.UpdateBetPlaque(tableData,Poker.PLAYER);
         Table.ShowPlayerState(tableData,Poker.PLAYER);
         $('#myhand').show();
         $('#betplaque').show();
       } else {
         $('#myhand').hide();
         $('#betplaque').hide();
-        Table.Indicate("You Folded");
+        // Table.Indicate("You Folded");
       }
       Table.LAST_PLAYER_STATE = Poker.PLAYER.State
     }
