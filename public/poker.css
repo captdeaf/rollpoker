@@ -17,6 +17,8 @@
     background-repeat: no-repeat;
     height: 80px;
     width: 60px;
+    border: 2px solid black;
+    border-radius: 8px;
   }
 
   div.hand {
@@ -205,6 +207,7 @@
 
   div.playerdata.TURN {
     background-color: #ffffffdd;
+    color: black;
   }
 
   div.playerdata.BET {

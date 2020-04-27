@@ -104,7 +104,7 @@ func (player *Player) TryCheck(game *Game, gc *GameCommand) int {
 
 	DoCall(game, tablename, gc.PlayerId, 0)
 	LogEvent(game, "Call", player.PlayerId, remaining, "CHECK")
-	LogMessage(game, "%s checks", player.DisplayName, remaining)
+	LogMessage(game, "%s checks", player.DisplayName)
 	return SAVE|RUN
 }
 

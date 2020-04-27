@@ -169,6 +169,7 @@ func MakePots(game *Game, table *TableState) []*Pot {
 	pots, idx := make([]*Pot, len(seenpots)), 0
 	for amt, _ := range seenpots {
 		pots[idx] = new(Pot)
+		pots[idx].Players = make([]*Player, 0)
 		pots[idx].BetAmount = amt
 		idx++
 	}
@@ -283,7 +284,7 @@ func (game *Game) TexWin(tablename string, _ int) bool {
 		allhands[idx] = new(PlayerHand)
 		allhands[idx].Player = player
 		hand := GetHandVals(game, player)
-		if player.State == WAITING || player.State == CALLED || player.State == ALLIN || player.State == BET {
+		if player.State != FOLDED {
 			allhands[idx].Cards, allhands[idx].Hand, allhands[idx].Score = GetTexasRank(hand, table.Cards["board"])
 		} else {
 			allhands[idx].Hand = ""
@@ -304,11 +305,8 @@ func (game *Game) FoldedWin(tablename string, _ int) bool {
 	for _, playerid := range table.Seats {
 		player := game.Public.Players[playerid]
 
-		if player.State == ALLIN || player.State == WAITING || player.State == BET || player.State == CALLED {
+		if player.State != FOLDED {
 			active = append(active, player)
-		} else {
-			player.State = FOLDED
-			player.DisplayState = "Folded"
 		}
 	}
 	if len(active) != 1 {
@@ -462,7 +460,7 @@ func (game *Game) ClearBets(tablename string, _ int) bool {
 	table := game.Public.Tables[tablename]
 	for _, pid := range table.Seats {
 		player := game.Public.Players[pid]
-		if player.State == CALLED || player.State == BET {
+		if player.State != FOLDED {
 			if player.Chips == 0 {
 				player.State = ALLIN
 				player.DisplayState = "All-In"
@@ -529,7 +527,26 @@ func (game *Game) BetRound(tablename string, _ int) bool {
 		copy(table.Dolist, GAME_COMMANDS["_foldedwin"])
 		return true
 	} else if (len(waiting) + len(called)) == 1 && len(allins) > 0 {
-		// One or more players all-in. One non-allin player who has called or is waiting.
+		// One or more players all-in. One non-allin player who has called or is waiting (start of new turn)
+		// This is a little twisted - ALLIN is set only after a raise, or a turn has ended.
+		allins = append(allins, called...)
+		allins = append(allins, waiting...)
+		washidden := false
+		for _, playerid := range allins {
+			player := game.Public.Players[playerid]
+			pkey := game.Private.PlayerKeys[player.PlayerId]
+			if player.Hand[0:1] == "!" {
+				washidden = true
+				player.Hand = DecryptHand(player.Hand, pkey)
+			}
+		}
+		if washidden {
+			for _, playerid := range allins {
+				player := game.Public.Players[playerid]
+				hand := GetHandVals(game, player)
+				LogMessage(game, "%s has: <<%s>>", player.DisplayName, strings.Join(hand, ">>,<<"))
+			}
+		}
 		return true
 	} else if len(waiting) == 0 {
 		// Nobody is waiting. Continue.
@@ -623,6 +640,20 @@ func RunCommandInTransaction(game *Game, tablename string) time.Duration {
 	return -1
 }
 
+func RunCommandLoop(game *Game, tablename string) time.Duration {
+	for {
+		ret := RunCommandInTransaction(game, tablename)
+		sanity := CheckGameSanity(game, ret >= 0)
+		if sanity != "" {
+			panic(sanity)
+		}
+
+		if ret != 0 {
+			return ret
+		}
+	}
+}
+
 func RunCommandsTransaction(gamename string, tablename string) time.Duration {
 	// RunCommand:
 	//   1) Fetches a game, and pulls a table with Dolist instructions
@@ -642,17 +673,7 @@ func RunCommandsTransaction(gamename string, tablename string) time.Duration {
 			return nil
 		}
 
-		for {
-			ret = RunCommandInTransaction(game, tablename)
-			sanity := CheckGameSanity(game, ret >= 0)
-			if sanity != "" {
-				panic(sanity)
-			}
-
-			if ret != 0 {
-				break
-			}
-		}
+		ret = RunCommandLoop(game, tablename)
 
 		SaveGame(game, tx)
 		return nil

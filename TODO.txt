@@ -1,22 +1,11 @@
-Primary TODOs:
-* Sanity checks before and after every command
-  * Only one player per table has TURN.
-  * At most one player per table has BET.
-  * Total amount of money (Players.Bet + Tables.Pot + Players.Chips) beforehand equals after.
-  * A player has TURN, OR a command is queued // command returns true or RUN
+USING FIREBASE USERS.
 
 Suggestions:
 * Flash on your turn
-* All-in show
-* Zoom integration?
-* Indicators stay until end of hand or turn?
-BUGGGGGG: Multiple people had TURN
 
 BUGS:
-* Bet plaque shows incorrect number. Bet 50 -> "Raise 0" "Raise 25" when
-  should be 50. etc.
-* Show all-in cards instead of hiding until winner is declared.
-* Add All-in cards to log when auto-play is enabled.
+* Can't duplicate: kqq87 beat kqqtt somehow? Winner was all-in from Flop.
+* Queued: Bet, should be Call.
 
 TODO:
 * Add bet amounts to green status div and player state. Use DisplayState?
@@ -63,3 +52,15 @@ FIXED:
   * Weights (prefer to call rather than raise, and raise rather than fold)
   * Wait random amount of time, from 0secs to 2s after OnTurn
 * JS Web Desktop Notifications
+* Sanity checks before and after every command
+  * Only one player per table has TURN.
+  * At most one player per table has BET.
+  * Total amount of money (Players.Bet + Tables.Pot + Players.Chips) beforehand equals after.
+  * A player has TURN, OR a command is queued // command returns true or RUN
+* BUGGGGGG: Multiple people had TURN (TryCheck was culprit. Fixed.)
+* Bet plaque shows incorrect number. Bet 50 -> "Raise 0" "Raise 25" when
+  should be 50. etc.
+* Reduce limit() to 1 for polling
+* Combine log events and only publish on SaveGame
+* Show all-in cards instead of hiding until winner is declared.
+* Add All-in cards to log when auto-play is enabled.

@@ -91,28 +91,29 @@ var Table = {
       var tt = bp.find('.betdesc');
       inp.change(function(val) {
         var min = Table.CURBET - Poker.PLAYER.Bet;
-        inp.val(parseInt(inp.val()));
-        if (inp.val() < min) {
+        var amt = parseInt(inp.val());
+        inp.val("" + amt);
+        if (amt < min) {
           inp.val(min);
         }
-        if (inp.val() > Poker.PLAYER.Chips) {
+        if (amt > Poker.PLAYER.Chips) {
           inp.val(Poker.PLAYER.Chips);
         }
-        if (inp.val() == 0) {
+        if (amt == min) {
             tt.text("Check");
         }
-        if (inp.val() == min && Table.CURBET != 0) {
+        if (amt == min && Table.CURBET != 0) {
             tt.text("Call");
         }
-        chipv.html(Table.ChipStack(inp.val(), "bigpiles"));
-        if (inp.val() > (Table.CURBET - Poker.PLAYER.Bet)) {
+        chipv.html(Table.ChipStack(amt, "bigpiles"));
+        if (amt > (Table.CURBET - Poker.PLAYER.Bet)) {
           if (Table.CURBET == 0) {
-            tt.text("Bet " + inp.val());
+            tt.text("Bet " + ((amt + Poker.PLAYER.Bet) - Table.CURBET));
           } else {
-            tt.text("Raise " + (inp.val() - Table.CURBET));
+            tt.text("Raise " + ((amt + Poker.PLAYER.Bet) - Table.CURBET));
           }
         }
-        if (Poker.PLAYER.Chips == inp.val()) {
+        if (Poker.PLAYER.Chips == amt) {
           tt.text("All-In");
         }
       });
@@ -236,13 +237,16 @@ var Table = {
       Table.MINBET = tableData.MinBet;
       Table.CURBET = tableData.CurBet;
       Table.PLYBET = player.Bet;
-      $('button[name="betcall"]').text("= " + (Table.CURBET - player.Bet) + " (Call)");
       $('button[name="betadd"]').text("+ " + Table.MINBET);
       $('button[name="betsub"]').text("- " + Table.MINBET);
       var inp = $('input.betp');
       inp.val(tableData.CurBet - Poker.PLAYER.Bet);
       var callbutt = $('button[name="betcall"]');
-      callbutt.text((tableData.CurBet - Poker.PLAYER.Bet) + " (call)");
+      if (tableData.CurBet - Poker.PLAYER.Bet == 0) {
+        callbutt.text("0 (Check)");
+      } else {
+        callbutt.text((tableData.CurBet - Poker.PLAYER.Bet) + " (Call)");
+      }
       inp.trigger("change");
     }
   },
@@ -441,7 +445,7 @@ var Table = {
     }[card.substring(1,2)];
     return pref + suff;
   },
-  LogUpdate: function(ts, message) {
+  LogUpdate: function(message) {
     var upd = message.replace(/<<(\w+)>>/g, function(a, b) {
       return Table.GetUnicodeCard(b);
     });

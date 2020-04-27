@@ -67,13 +67,17 @@ func DecryptHand(msg, key string) string {
 	return string("Undecipherable")
 }
 
+func HandToHandVals(strhand string) []string {
+	hand := make([]string, len(strhand)/2)
+
+	for i := 0; i < len(strhand); i += 2 {
+		hand[i/2] = strhand[i:i+2]
+	}
+	return hand
+}
+
 func GetHandVals(game *Game, player *Player) []string {
 	pkey := game.Private.PlayerKeys[player.PlayerId]
 	res := DecryptHand(player.Hand, pkey)
-	hand := make([]string, len(res)/2)
-
-	for i := 0; i < len(res); i += 2 {
-		hand[i/2] = res[i:i+2]
-	}
-	return hand
+	return HandToHandVals(res)
 }

@@ -65,7 +65,7 @@ var Poker = {
   },
   LAST_STATE: "NOSTATE",
   DATA: {},
-  UpdateState: function(doc) {
+  Update: function(doc) {
     Poker.PLAYER = undefined;
     _.each(doc.Players, function(p) {
       if (p.PlayerId == Poker.PLAYER_ID) {
@@ -88,21 +88,6 @@ var Poker = {
       handler.Start(doc);
     }
     handler.Update(doc);
-  },
-  ProcessEvent: function(evt) {
-  },
-  Update: function(resp) {
-    Poker.UpdateState(resp);
-    if (resp.Events) {
-      for (var i = 0; i < resp.Events.length; i++) {
-        var evt = resp.Events[i];
-        if (Events[evt.Event]) {
-          Events[evt.Event](evt);
-        } else {
-          console.log("Don't know what to do with ", evt.Event);
-        }
-      }
-    }
   },
   SendCommand: function(command, args) {
     var params = {
@@ -135,7 +120,7 @@ var Poker = {
       Poker.LOGS.orderBy("Timestamp", "desc").limit(30).get().then(function(logs) {
         Poker.ProcessLogs(logs, false);
         // Then start a tail.
-        Poker.LOGS.orderBy("Timestamp", "desc").limit(5).onSnapshot(function(logs) {
+        Poker.LOGS.orderBy("Timestamp", "desc").limit(1).onSnapshot(function(logs) {
           Poker.ProcessLogs(logs, true);
         });
       });
@@ -144,9 +129,8 @@ var Poker = {
   LATEST_SEEN: 0,
   LogCallback: undefined,
   UpdateLog: function(log) {
-    console.log(log.Timestamp, log.Message);
     if (Poker.LogCallback) {
-      Poker.LogCallback(log.Timestamp, log.Message);
+      Poker.LogCallback(log.Message);
     }
   },
   ProcessLogs: function(logs, doevents) {
@@ -156,20 +140,26 @@ var Poker = {
       rev.push(log.data());
     });
     for (var i = rev.length - 1; i >= 0; i--) {
-      if (Poker.LATEST_SEEN < rev[i].Timestamp) {
-        Poker.LATEST_SEEN = rev[i].Timestamp;
-        if (rev[i].Message && rev[i].Message != "") {
-          Poker.UpdateLog(rev[i]);
-        } else if (doevents) {
-          var evt = Events[rev[i].EventName];
-          if (evt) {
-            evt.apply(evt, rev[i].Args);
-          } else {
-            console.log("No Events[" + rev[i].EventName + "]!");
+      var litems = rev[i];
+      if (Poker.LATEST_SEEN < litems.Timestamp) {
+        if (!litems.Logs) {
+          console.log("Unknown log items", litems);
+        } else {
+          Poker.LATEST_SEEN = litems.Timestamp;
+          for (var j = 0; j < litems.Logs.length; j++) {
+            var litem = litems.Logs[j];
+            if (litem.Message && litem.Message != "") {
+              Poker.UpdateLog(litem);
+            } else if (doevents) {
+              var evt = Events[litem.EventName];
+              if (evt) {
+                evt.apply(evt, litem.Args);
+              } else {
+                console.log("No Events[" + litem.EventName + "]!");
+              }
+            }
           }
         }
-      } else {
-        console.log("Seen", rev[i]);
       }
     }
   },

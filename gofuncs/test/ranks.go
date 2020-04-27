@@ -73,4 +73,18 @@ RegisterTest("5-high straight beats best set", func() bool {
 	return Rank("sa da ha ck dq") < Rank("d5 d4 s3 ca d2")
 })
 
+RegisterTest("Two pair beats high pair", func() bool {
+	return Rank("ck sq hq s3 s5 h8 c7") < Rank("ck sq hq s3 s5 st ct")
+})
+
+RegisterTest("Uno Man bug", func() bool {
+	_, _, v1 := rollpoker.GetTexasRank([]string{"s8","c7"}, []string{"ck","sq","hq","s3","s5"})
+	_, _, v2 := rollpoker.GetTexasRank([]string{"st","ct"}, []string{"ck","sq","hq","s3","s5"})
+
+	if v2 < v1 { return false }
+
+
+	return true
+})
+
 }

@@ -83,10 +83,14 @@ type GameEvent struct {
 
 type LogItem struct {
 	PlayerId	string
-	Timestamp	int64
 	Message		string
 	EventName	string
 	Args		[]interface{}
+}
+
+type LogItems struct {
+	Timestamp	int64
+	Logs		*[]*LogItem
 }
 
 type Game struct {
@@ -94,6 +98,7 @@ type Game struct {
 	Private	PrivateGameInfo
 	Public	PublicGameInfo
 	TX	*firestore.Transaction
+	Logs	[]*LogItem
 }
 
 const (
@@ -251,30 +256,18 @@ func FetchGame(name string, tx *firestore.Transaction) *Game {
 
 func LogEvent(game *Game, name string, fargs ...interface{}) {
 	litem := new(LogItem)
-	litem.Timestamp = time.Now().UnixNano()
 	litem.Message = ""
 	litem.EventName = name
 	litem.Args = fargs
-	lname := fmt.Sprintf("public/%s/log/%d", game.Name, litem.Timestamp)
-	docref := FIRESTORE_CLIENT.Doc(lname)
-	err := game.TX.Set(docref, litem)
 	fmt.Println(litem.Message)
-	if err != nil {
-		fmt.Printf("Error saving LogItem: %v\n", err)
-	}
+	game.Logs = append(game.Logs, litem)
 }
 
 func LogMessage(game *Game, msg string, fargs ...interface{}) {
 	litem := new(LogItem)
-	litem.Timestamp = time.Now().UnixNano()
 	litem.Message = fmt.Sprintf(msg, fargs...)
-	lname := fmt.Sprintf("public/%s/log/%d", game.Name, litem.Timestamp)
-	docref := FIRESTORE_CLIENT.Doc(lname)
-	err := game.TX.Set(docref, litem)
 	fmt.Println(litem.Message)
-	if err != nil {
-		fmt.Printf("Error saving LogItem: %v\n", err)
-	}
+	game.Logs = append(game.Logs, litem)
 }
 
 func SaveGame(game *Game, tx *firestore.Transaction) {
@@ -291,10 +284,27 @@ func SaveGame(game *Game, tx *firestore.Transaction) {
 		fmt.Printf("Error saving public: %v\n", err)
 		return
 	}
+
+	if len(game.Logs) > 0 {
+		litems := new(LogItems)
+		litems.Timestamp = time.Now().UnixNano()
+		litems.Logs = &game.Logs
+
+		lname := fmt.Sprintf("public/%s/log/%d", game.Name, litems.Timestamp)
+		docref := FIRESTORE_CLIENT.Doc(lname)
+		err = game.TX.Set(docref, litems)
+		if err != nil {
+			fmt.Printf("Error saving Log Items: %v\n", err)
+			return
+		}
+	}
 	fmt.Println("Saved", game.Name)
 }
 
 func CheckGameSanity(game *Game, hasCommandWaiting bool) string {
+	if game.Public.State != INGAME {
+		return ""
+	}
 	totalChips := 0
 	for _, table := range game.Public.Tables {
 		turncount := 0
@@ -418,6 +428,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 				return nil
 			}
 			dosave = true
+			dorun = false
 		} else {
 			// TODO: DELETE THIS BEFORE PUSHING.
 			// It's just here for testing
@@ -457,11 +468,17 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		}
 		sanity := CheckGameSanity(game, dorun || gc.Command == "StartGame")
 		if sanity == "" {
+			var ret time.Duration
+			var tbl string
+			if dorun {
+				tbl = game.TableForPlayer(player)
+				ret = RunCommandLoop(game, tbl)
+			}
 			if dosave {
 				SaveGame(game, tx)
 			}
-			if dorun {
-				go RunCommands(game.Name, game.TableForPlayer(player), 0)
+			if dorun && ret >= 0 {
+				go RunCommands(game.Name, tbl, ret)
 			}
 		} else {
 			panic(sanity)
