@@ -12,16 +12,18 @@ VIEWS.Signup = new View({
   OnClick: {
     "startgame": function(evt) {
       RollPoker.SendCommand("StartPoker");
-    }
+    },
   },
   OnSubmit: {
-    "joinup": function(evt) {
-      var data = {}
-      _.each($('#joingameform').serializeArray(), function(fd) {
-        data[fd.name] = fd.value;
+    "signup": function(evt) {
+      var dispname = $('#DisplayName').val();
+      RollPoker.SendCommand("Register", {DisplayName: dispname});
+    },
+    "joingroup": function(evt) {
+      var roompass = $('#RoomPass').val();
+      RollPoker.SendCommand("JoinGroup", {RoomPass: roompass}, function() {
+        window.location.reload(false);
       });
-      // TODO: Sanity check email and display name
-      RollPoker.SendCommand("Join", data);
-    }
+    },
   }
 });

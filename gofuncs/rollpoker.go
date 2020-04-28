@@ -61,7 +61,8 @@ type GameRoom struct {
 	CurrentBlinds	[]int
 	BlindTime	int64
 	PausedAt	int64		// Nonzero if paused
-	Password	string		// Password to register as member.
+	Members		[]string	// People who can view and sign up.
+	RoomPass	string		// Password to register as member.
 }
 
 type LogItem struct {
@@ -117,7 +118,6 @@ type GameCommand struct {
 	PlayerId	string
 	Command		string
 	Args		map[string] string
-	ErrorMessage	string
 }
 
 var FIRESTORE_CLIENT *firestore.Client
@@ -316,10 +316,6 @@ func CheckGameSanity(game *RoomData, hasCommandWaiting bool) string {
 	return ""
 }
 
-func RegisterAccount(game *RoomData, gc *GameCommand) bool {
-	return true
-}
-
 type CommandResponse struct {
 	Errmsg	string	// If empty, command was a success.
 	Run	bool	// If game should run commands (immediately)
@@ -328,21 +324,15 @@ type CommandResponse struct {
 }
 
 func CError(errmsg string) *CommandResponse {
-	ret := new(CommandResponse)
-	ret.Errmsg = errmsg
-	ret.Run = false
-	ret.Save = false
-	ret.Willrun = false
-	return ret
+	return CResponse(errmsg, false, false, false)
+}
+
+func CSave() *CommandResponse {
+	return CResponse("", false, true, false)
 }
 
 func COK() *CommandResponse {
-	ret := new(CommandResponse)
-	ret.Errmsg = ""
-	ret.Run = true
-	ret.Save = true
-	ret.Willrun = true
-	return ret
+	return CResponse("", true, true, false)
 }
 
 func CResponse(errmsg string, run, save, willrun bool) *CommandResponse {
@@ -355,7 +345,7 @@ func CResponse(errmsg string, run, save, willrun bool) *CommandResponse {
 }
 
 func Poker(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add("Content-Type", "text/plain")
 
 	// Only authorized players can run GameCommand commands.
 	var uid = GetUserIDFromHeader(r)
@@ -371,10 +361,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	gc.PlayerId = uid
-	gc.ErrorMessage = ""
 
-	dorun := false
-	dosave := false
 
 	txerr := FIRESTORE_CLIENT.RunTransaction(context.Background(),
 					func(ctx context.Context, tx *firestore.Transaction) error {
@@ -387,57 +374,39 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Println("Got", gc.Command)
 
-		if gc.Command == "invite" {
-			if !RegisterAccount(game, &gc) {
-				http.Error(w, "Unable to register", http.StatusBadRequest)
-				return nil
-			}
-			dosave = true
-			dorun = false
-		} else {
-			if player == nil {
-				// If player is nil, the only thing the player
-				// can do is "register" / invite.
-				http.Error(w, "You are not a player", http.StatusBadRequest)
-				return nil
-			} else {
-				// Call Command by name if it has one
-				method := reflect.ValueOf(player).MethodByName("Try" + game.Room.RoomState + gc.Command)
+		// Call Command by name if it has one
+		method := reflect.ValueOf(player).MethodByName("Try" + game.Room.RoomState + gc.Command)
+		var cresp *CommandResponse
 
-				if method.IsValid() {
-					rval := method.Call([]reflect.Value{reflect.ValueOf(game), reflect.ValueOf(&gc)})
-					iret := rval[0].Int()
-					dorun = iret & RUN == RUN
-					dosave = iret & SAVE == SAVE
-				} else {
-					return nil
-				}
-			}
-		}
-		if gc.ErrorMessage != "" {
-			http.Error(w, gc.ErrorMessage, http.StatusBadRequest)
-		} else if dosave == false {
-			http.Error(w, "You can't do that", http.StatusBadRequest)
+		if method.IsValid() {
+			rval := method.Call([]reflect.Value{reflect.ValueOf(game), reflect.ValueOf(&gc)})
+			cresp = rval[0].Interface().(*CommandResponse)
 		} else {
-			fmt.Fprintf(w, "success")
+			cresp = CError("Invalid command")
 		}
-		sanity := CheckGameSanity(game, dorun || gc.Command == "StartGame")
-		if sanity == "" {
-			var ret time.Duration
-			var tbl string
-			if dorun {
-				tbl = game.TableForPlayer(player)
-				ret = RunCommandLoop(game, tbl)
-			}
-			if dosave {
-				SaveGame(game, tx)
-			}
-			if dorun && ret >= 0 {
-				go RunCommands(game.Name, tbl, ret)
-			}
-		} else {
+
+		if cresp.Errmsg != "" {
+			http.Error(w, cresp.Errmsg, http.StatusBadRequest)
+			return nil
+		}
+		sanity := CheckGameSanity(game, cresp.Run || cresp.Willrun)
+		if sanity != "" {
+			http.Error(w, "Game failed sanity check", http.StatusBadRequest)
 			panic(sanity)
 		}
+		var ret time.Duration
+		var tbl string
+		if cresp.Run {
+			tbl = game.TableForPlayer(player)
+			ret = RunCommandLoop(game, tbl)
+		}
+		if cresp.Save {
+			SaveGame(game, tx)
+		}
+		if cresp.Run && ret >= 0 {
+			go RunCommands(game.Name, tbl, ret)
+		}
+		fmt.Fprintf(w, "success\n")
 		return nil
 	})
 

@@ -10,7 +10,7 @@ var Game = {
 var Player = {
   uid: "",   // UID, set from firebase auth
   state: "", // Player[UID].State from game structure
-  info: "",  // All info from player[uid].state
+  info: null,  // All info from player[uid].state
 };
 
 var RollPoker = {
@@ -96,7 +96,7 @@ var RollPoker = {
       RollPoker.Handler.Update(doc);
     }
   },
-  SendCommand: function(command, args) {
+  SendCommand: function(command, args, onsucc) {
     var params = {
       Name: Game.name,
       Command: command,
@@ -106,13 +106,18 @@ var RollPoker = {
     $.ajax({
       url: '/Poker',
       type: 'POST',
-      dataType: 'json',
+      dataType: 'text',
       headers: RollPoker.HEADERS,
       data: JSON.stringify(params),
       success: function(result) {
-        // TODO: Errors will start returning strings.
-        console.log(result);
-      }
+        if (onsucc) {
+          onsucc();
+        }
+      },
+      error: function(result) {
+        console.log("err", result.responseText);
+        alert(result.responseText);
+      },
     });
   },
   Monitor: function() {
