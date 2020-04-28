@@ -1,191 +1,391 @@
-
-var Poker = {
-  SetupFirebase: function() {
-    // Your web app's Firebase configuration
-    var firebaseConfig = {
-      apiKey: "AIzaSyAsTsJ7UjBQu8CMADJP-JFysn6ON8Hm77M",
-      authDomain: "rollpoker.firebaseapp.com",
-      databaseURL: "https://rollpoker.firebaseio.com",
-      projectId: "rollpoker",
-      storageBucket: "rollpoker.appspot.com",
-      messagingSenderId: "413322307823",
-      appId: "1:413322307823:web:2d12f3485f45d55b12d31a"
-    };
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
+var CommandQueue = {
+  OnTurnStart: function() {
+    if (window.Notification && window.Notification.permission == "granted") {
+      var notif = new window.Notification("Your turn");
+      notif.onclick = function() {
+        window.focus();
+        notif.close();
+      }
+      setTimeout(function() {notif.close();}, 4000);
+    }
+    if (Table.QueuedCommand) {
+      setTimeout(function() { Table.PopCommand(); }, 1000);
+    }
   },
-  Setup: function() {
-    // First make sure we have our game name.
-    var m = document.location.pathname.match(/table\/(\w+)$/);
-    if (m) {
-      Poker.NAME = m[1];
+  QueueCommand: function(cmd, args, clearonbet) {
+    Table.QueuedCommand = {
+      clearonbet: clearonbet,
+      cmd: cmd,
+      args: args,
+    };
+    if (Poker.PLAYER.State == "TURN") {
+      Table.PopCommand();
     } else {
-      return;
-    }
-    var m = document.location.search.match(/\?id=([\w-]+)\&key=([\w-]+)$/);
-    if (m) {
-      Poker.PLAYER_ID = m[1];
-      Poker.PLAYER_KEY = m[2];
-      Poker.SetPlayerCookie("playerid", Poker.PLAYER_ID);
-      Poker.SetPlayerCookie("playerkey", Poker.PLAYER_KEY);
-      // document.location.search = "";
-    }
-    if (!Poker.PLAYER_ID) {
-      Poker.PLAYER_ID = Poker.GetPlayerId();
-      Poker.PLAYER_KEY = Poker.GetPlayerKey();
-    }
-
-    // Initialize all the renderers
-    Signup.Setup();
-    Table.Setup();
-  },
-  SetPlayerCookie: function(name, val) {
-    // We set this in a cookie.
-    var d = new Date();
-    d.setTime(d.getTime() + (365*24*60*60*1000));
-    var expires = "expires="+ d.toUTCString();
-    var newcookie = name + "=" + val + ";" + expires + ";path=" + document.location.pathname;
-    document.cookie = newcookie;
-    console.log("Set:", newcookie)
-  },
-  UpdateSettings: function(settings) {
-    Table.UpdateSettings(settings);
-  },
-  GetPlayerId: function() {
-    var m = document.cookie.match(/playerid=(\w+)/)
-    if (m) {
-      return m[1];
+      Table.Indicate("Queued: " + cmd, {canCancel: true});
     }
   },
-  GetPlayerKey: function() {
-    var m = document.cookie.match(/playerkey=(\w+)/)
-    if (m) {
-      return m[1];
+  MaybeClearQueue: function() {
+    // Called on Bets. If we have a queued command that isn't Fold,
+    // then cancel it.
+    if (Table.QueuedCommand && Table.QueuedCommand.cmd != "Fold") {
+      Table.QueueCancel();
     }
   },
-  LAST_STATE: "NOSTATE",
-  DATA: {},
-  Update: function(doc) {
-    Poker.PLAYER = undefined;
-    _.each(doc.Players, function(p) {
-      if (p.PlayerId == Poker.PLAYER_ID) {
-        Poker.PLAYER = p;
-      }
-    });
-    var isNew = false;
-    if (Poker.LAST_STATE != doc.State) {
-      isNew = true;
-      Poker.LAST_STATE = doc.State;
-    }
-    Poker.DATA = doc;
-    var handler = Table;
-    if (doc.State == "NOGAME") {
-      // Listing of players currently registered, and ability to register.
-      handler = Signup;
-    }
-    if (isNew) {
-      Poker.LogCallback = undefined;
-      handler.Start(doc);
-    }
-    handler.Update(doc);
-  },
-  SendCommand: function(command, args) {
-    var params = {
-      Name: Poker.NAME,
-      PlayerId: Poker.PLAYER_ID,
-      PlayerKey: Poker.PLAYER_KEY,
-      Command: command,
-      Args: args,
-    };
-    $.ajax({
-      url: '/Poker',
-      type: 'POST',
-      dataType: 'json',
-      data: JSON.stringify(params),
-      success: function(result) {
-        console.log(result);
-      }
-    });
-  },
-  Monitor: function() {
-    // Start monitoring the state document.
-    if (Poker.NAME && Poker.NAME != "") {
-      var db = firebase.firestore();
-      Poker.DOCUMENT = db.doc("/public/" + Poker.NAME);
-      Poker.DOCUMENT.onSnapshot(function(doc) {
-        Poker.Update(doc.data());
-      });
-
-      Poker.LOGS = db.collection("/public/" + Poker.NAME + "/log")
-      Poker.LOGS.orderBy("Timestamp", "desc").limit(30).get().then(function(logs) {
-        Poker.ProcessLogs(logs, false);
-        // Then start a tail.
-        Poker.LOGS.orderBy("Timestamp", "desc").limit(1).onSnapshot(function(logs) {
-          Poker.ProcessLogs(logs, true);
-        });
-      });
-    }
-  },
-  LATEST_SEEN: 0,
-  LogCallback: undefined,
-  UpdateLog: function(log) {
-    if (Poker.LogCallback) {
-      Poker.LogCallback(log.Message);
-    }
-  },
-  ProcessLogs: function(logs, doevents) {
-    // We get them in an ordered descent. Reverse 'em.
-    var rev = [];
-    logs.forEach(function(log) {
-      rev.push(log.data());
-    });
-    for (var i = rev.length - 1; i >= 0; i--) {
-      var litems = rev[i];
-      if (Poker.LATEST_SEEN < litems.Timestamp) {
-        if (!litems.Logs) {
-          console.log("Unknown log items", litems);
-        } else {
-          Poker.LATEST_SEEN = litems.Timestamp;
-          for (var j = 0; j < litems.Logs.length; j++) {
-            var litem = litems.Logs[j];
-            if (litem.Message && litem.Message != "") {
-              Poker.UpdateLog(litem);
-            } else if (doevents) {
-              var evt = Events[litem.EventName];
-              if (evt) {
-                evt.apply(evt, litem.Args);
-              } else {
-                console.log("No Events[" + litem.EventName + "]!");
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  GetMyTable: function() {
-    // TODO: MTTs
-    return "table0";
-  },
-  GetPlayerLocation: function(playerid) {
-    return $("#" + playerid).offset();
-  },
-  GetPlayerSeat: function(playerid) {
-    // returns undefined if not seated at same table as we are watching
-    var mytable = Poker.DATA.Tables[Poker.GetMyTable()]
-    for (var seatname in mytable.Seats) {
-      var pid = mytable.Seats[seatname];
-      if (pid == playerid) {
-        return seatname;
-      }
-    };
-    // Not at this table.
-    return undefined;
+  QueueCancel: function() {
+    Table.QueuedCommand = undefined;
+    Table.ClearIndicator();
   },
 };
 
-$(document).ready(function() {
-  Poker.SetupFirebase();
-  Poker.Setup();
-  Poker.Monitor();
+VIEWS.Poker = new View({
+  Templates: {
+    TABLE: "#maintable",
+    VIEW: "#tableview",
+    HANDVIEW: "#myhandview",
+    BETVIEW: "#betplaqueview",
+    MENU: "#menucontents",
+  },
+  INDICATING: undefined,
+  Indicate: function(message, opts) {
+    if (opts && opts.canCancel) {
+      $("#cancelindicate").show();
+    } else {
+      $("#cancelindicate").hide();
+    }
+    $("#indication").text(message);
+    $("#indicatorbar").show();
+    Table.INDICATING = message;
+  },
+  ClearIndicator: function() {
+    Table.INDICATING = undefined;
+    $("#indicatorbar").hide();
+  },
+  PopCommand: function() {
+    if (Table.INDICATING) {
+      Table.ClearIndicator();
+    }
+    var qd = Table.QueuedCommand;
+    Table.QueuedCommand = undefined;
+    Poker.SendCommand(qd.cmd, qd.args);
+  },
+  OnClick: {
+    "betadd": function() {
+      inp.val(parseInt(inp.val()) + Table.MINBET);
+      inp.trigger("change");
+    },
+    "betsub": function() {
+      inp.val(parseInt(inp.val()) - Table.MINBET);
+      inp.trigger("change");
+    },
+    "cardsettings": function() {
+      var menu = $("#menu");
+      menu.html(Table.MENU({data: Game.data, player: Player.info}));
+      menu.show();
+    },
+    "closemenu": function() {
+      $("#menu").hide();
+    },
+    "asknotifications": function() {
+      Notification.requestPermission();
+    },
+    "cancelindicate": function() {
+      CommandQueue.QueueCancel();
+      this.ClearIndicator();
+    },
+  },
+  Start: function(doc) {
+    $('body').html(this.VIEW());
+    if (Poker.PLAYER) {
+    }
+    Poker.LogCallback = Table.LogUpdate;
+  },
+  CHIP_VALS: "",
+  CUR_BET: -1,
+  Update: function(data) {
+    if (data.GameSettings.ChipValues != Table.CHIP_VALS) {
+      Table.UpdateChips(data.GameSettings.ChipValues);
+      Table.CHIP_VALS = data.GameSettings.ChipValues;
+    }
+    // TODO: Pick my table out from multiple tables.
+    var tableData = data.Tables["table0"];
+    var table = $(Table.TABLE({game: data, table:tableData, players: data.Players}));
+    $('#mytable').empty();
+    $('#mytable').append(table);
+    Table.ShowPlayerState(tableData,Poker.PLAYER);
+    if (Poker.PLAYER) {
+      if (Poker.PLAYER.Hand && Poker.PLAYER.Hand.length > 0) {
+        console.log("State: " + Poker.PLAYER.State);
+        if (!Table.IsSameHand(Poker.PLAYER.Hand, Table.LASTHAND)) {
+          Table.CUR_BET = -1;
+          Table.LASTHAND = Poker.PLAYER.Hand;
+          Table.UpdateHand(Poker.PLAYER);
+          Table.ClearIndicator();
+        }
+        if (Poker.PLAYER.State != Table.LAST_PLAYER_STATE) {
+          if (Poker.PLAYER.State == "TURN") {
+            console.log("Trying OnTurnStart");
+            Table.OnTurnStart();
+          } else {
+            Table.ClearIndicator();
+          }
+        }
+        if (tableData.CurBet != Table.CUR_BET) {
+          Table.CUR_BET = tableData.CurBet;
+          Table.UpdateBetPlaque(tableData,Poker.PLAYER);
+        }
+        Table.ShowPlayerState(tableData,Poker.PLAYER);
+        $('#myhand').show();
+        $('#betplaque').show();
+      } else {
+        $('#myhand').hide();
+        $('#betplaque').hide();
+        // Table.Indicate("You Folded");
+      }
+      Table.LAST_PLAYER_STATE = Poker.PLAYER.State
+    }
+  },
+  ShowPlayerState: function(table, player) {
+    $('#indicator').text(Table.GetIndicatorText(table, player));
+  },
+  GetIndicatorText: function(table, player) {
+    if (!player) return "Spectating";
+    if (player.State == "TURN") {
+      return "Your Turn";
+    } else {
+      return player.State;
+    }
+  },
+  LASTHAND: [],
+  IsSameHand: function(ary, ary2) {
+    if (ary.length != ary2) return false;
+    for (var i = 0; i < ary.length; i++) {
+      if (ary[i] != ary2) return false;
+    }
+    return true
+  },
+  MINBET: -1,
+  CURBET: -1,
+  PLYBET: -1,
+  UpdateBetPlaque: function(tableData, player, val) {
+    if (Table.MINBET != tableData.MinBet || Table.CURBET != tableData.CurBet ||
+        player.Bet != Table.PLYBET) {
+      Table.MINBET = tableData.MinBet;
+      Table.CURBET = tableData.CurBet;
+      Table.PLYBET = player.Bet;
+      $('button[name="betadd"]').text("+ " + Table.MINBET);
+      $('button[name="betsub"]').text("- " + Table.MINBET);
+      var inp = $('input.betp');
+      inp.val(tableData.CurBet - Poker.PLAYER.Bet);
+      var callbutt = $('button[name="betcall"]');
+      if (tableData.CurBet - Poker.PLAYER.Bet == 0) {
+        callbutt.text("0 (Check)");
+      } else {
+        callbutt.text((tableData.CurBet - Poker.PLAYER.Bet) + " (Call)");
+      }
+      inp.trigger("change");
+    }
+  },
+  UpdateHand: function(player) {
+    $('#myhand').empty();
+    if (player.Hand.length > 0) {
+      $('#myhand').append($(Table.HANDVIEW({player: player})));
+    }
+  },
+  SetDraggable: function(jqe, opts, cb, cbpress) {
+    function handle_mousedown(e){
+      if (window.dragging != undefined) return;
+      if (opts.canStart) {
+        if (!opts.canStart()) return;
+      }
+      window.dragging = true;
+      var origX = e.pageX;
+      var origY = e.pageY;
+      var off = jqe.offset();
+      function handle_dragging(evt){
+        var newoff = {
+          left: off.left,
+          top: off.top,
+        }
+        if (opts.horiz) newoff.left += (evt.pageX - origX);
+        if (opts.vert) newoff.top += (evt.pageY - origY);
+        jqe.offset(newoff);
+        evt.preventDefault();
+      }
+      function handle_mouseup(evt){
+        if (cbpress) {
+          cbpress("end");
+        }
+        $('body')
+        .off('touchend', handle_mouseup)
+        .off('touchmove', handle_dragging)
+        .off('touchcancel', handle_mouseup)
+        .off('mousemove', handle_dragging)
+        .off('mouseup', handle_mouseup)
+        .off('mouseleave', handle_mouseup);
+        jqe.offset(off);
+        cb(jqe, {x: evt.pageX, y: evt.pageY, xd: evt.pageX - origX, yd: evt.pageY - origY});
+        evt.preventDefault();
+        window.dragging = undefined;
+      }
+      $('body')
+      .on('mouseleave', handle_mouseup)
+      .on('mouseup', handle_mouseup)
+      .on('mousemove', handle_dragging)
+      .on('touchend', handle_mouseup)
+      .on('touchmove', handle_dragging)
+      .on('touchcancel', handle_mouseup);
+      if (cbpress) {
+        cbpress("start");
+      }
+      e.preventDefault();
+    }
+    jqe.mousedown(handle_mousedown);
+    jqe.on("touchstart", handle_mousedown);
+  },
+  GetHand: function(str) {
+    var ret = [];
+    if (str.startsWith("!")) {
+      str = atob(str.substring(1,str.length))
+      // Figure out how many cards. There's 38 chars in encryption
+      // !, a-z0-9, an extra m, then the cards (2 chars each)
+      for (var i = 38; i < str.length; i += 2) {
+        ret.push("bg");
+      }
+    } else {
+      return str.match(/(\w\w)/g);
+    }
+    return ret
+  },
+  DecryptMyHand: function(str) {
+    var ret = [];
+    if (str.startsWith("!")) {
+      var ns = "";
+      var bstr = atob(str.substring(1,str.length));
+      // Decrypt: De-XOR it, then pluck the string out from m.*m
+      for (var i = 0; i < bstr.length; i++) {
+        ns = ns + String.fromCharCode(bstr.charCodeAt(i) ^ Poker.PLAYER_KEY.charCodeAt(i % Poker.PLAYER_KEY.length));
+      }
+      var m = ns.match(/m(\w+)m/);
+      return m[1].match(/\w\w/g);
+    }
+
+    for (var i = 0; i < str.length; i += 2) {
+      ret.push(str.substring(i,i+2));
+    }
+    return ret;
+  },
+  Setup: function() {
+    for (var key in Table.Templates) {
+      Table[key] = _.template($(Table.Templates[key]).html());
+    }
+
+    function makeCard(x,y,cardname) {
+      var style = document.createElement('style');
+      style.type = 'text/css';
+      var cardx = x * 61.5;
+      var cardy = y * 81;
+      style.innerHTML = "." + cardname +
+        "{ background-position: -" + cardx + "px -" + cardy + "px; }";
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    var cards = ["a", "2", "3", "4", "5", "6", "7", "8", "9", "t", "j", "q", "k"];
+    var suits = ["s", "c", "d", "h"];
+    for (var c = 0; c < cards.length; c++) {
+      for (var s = 0; s < suits.length; s++) {
+        makeCard(c, s, suits[s] + cards[c]);
+      }
+    }
+
+    function makeChip(x,y,chipname) {
+      var style = document.createElement('style');
+      style.type = 'text/css';
+      var chipx = x * 129;
+      var chipy = y * 59;
+      style.innerHTML = "." + chipname +
+        "{ background-position: -" + chipx + "px -" + chipy + "px; }";
+      document.getElementsByTagName('head')[0].appendChild(style);
+    }
+
+    makeChip(0, 0, "za");
+    makeChip(1, 0, "zb");
+    makeChip(2, 0, "zc");
+    makeChip(3, 0, "zd");
+    makeChip(4, 0, "ze");
+    makeChip(5, 0, "zf");
+  },
+
+
+  CHIP_VALUES: [],
+
+  UpdateChips: function(str) {
+    Table.CHIP_VALUES = [];
+    // Accepts "25 100 500 ..." etc.
+    var colors = ["za", "zb", "zc", "zd", "ze", "zf"];
+    var values = str.split(" ");
+    for (var i = 0; i < values.length; i++) {
+      var num = parseInt(values[i], 10);
+      if (num != NaN && num > 0) {
+        Table.CHIP_VALUES.push([num, colors[i]]);
+      }
+    }
+    Table.CHIP_VALUES.sort(function(a,b) { return a[0] - b[0]; });
+  },
+
+  ChipStack: function(amt, cls) {
+    if (!cls) { cls = "smallpiles"; }
+    var piles = $('<div class="' + cls + '">');
+    for (var i = 0; amt > 0 && i < Table.CHIP_VALUES.length; i++) {
+      var pile = $('<ul class="pile">');
+      var max = Table.CHIP_VALUES[i][0] * 20;
+      var half = Table.CHIP_VALUES[i][0] * 10;
+      var numval = amt % max;
+      if (numval === 0) {
+        numval = max;
+      } else if (numval < half && amt > max) {
+        numval += half;
+      }
+      amt = amt - numval;
+      for (var j = 0; j < numval; j = j + Table.CHIP_VALUES[i][0]) {
+        var li = $('<li>');
+        li.append($('<div class="chip ' + Table.CHIP_VALUES[i][1] + '">'));
+        pile.append(li);
+      }
+
+      piles.prepend($('<div class="pilecontainer">').append(pile));
+    }
+    return piles.wrapAll('<div>').parent().html();
+  },
+  GetUnicodeCard: function(card) {
+    var pref = {
+      s: "&#x1f0a",
+      h: "&#x1f0b",
+      d: "&#x1f0c",
+      c: "&#x1f0d",
+    }[card.substring(0,1)];
+    var suff = {
+      "a": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9",
+      "t": "a",
+      "j": "b",
+      "q": "d",
+      "k": "e",
+    }[card.substring(1,2)];
+    return pref + suff;
+  },
+  LogUpdate: function(message) {
+    var upd = message.replace(/<<(\w+)>>/g, function(a, b) {
+      return Table.GetUnicodeCard(b);
+    });
+    var ls = $('#logscreen');
+    ls.append($("<p>").html(upd));
+    ls[0].scrollTop = ls[0].scrollHeight;
+  },
 });

@@ -15,9 +15,6 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/option"
-
-	"github.com/sendgrid/sendgrid-go"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
 var BASE_URI string = "https://rollpoker.web.app"
@@ -28,16 +25,8 @@ type GameSettings struct {
 	GameType	string	// Cash, SitNGo
 	BetLimit	string	// NoLimit, PotLimit
 	StartingChips	int	// 1500
-	ChipValues	string	// White Red Blue Green Black Yellow: "25 100 500 1000..."
 	BlindStructure	[]string	// 25 50,25 75,50 100,75 150,...
 	BlindTimes	[]int	// 40 40 40 20, for first 3 to be 40 minutes, then 20 mins after that.
-}
-
-type PrivateGameInfo struct {
-	PlayerKeys	map[string]string	// KillerOrangeHouse:FooBarBaz
-	TableDecks	map[string][]string	// "table0": ["ha", "s3", ...], ...
-	AdminPassword	string			// "hunter2"
-	OrigState	*GameSettings		// Original game state for restart/new game/etc
 }
 
 type Player struct {
@@ -49,7 +38,7 @@ type Player struct {
 	Bet		int		// Current amount bet // inside the circle
 	TotalBet	int		// Running total
 	State		string		// "Waiting" "Folded" etc
-	Hand		string		// "hasa" - decrypted, or "!<string>" encrypted
+	Hand		[]string	// "hasa" - decrypted, or "!<string>" encrypted
 }
 
 type TableState struct {
@@ -63,22 +52,16 @@ type TableState struct {
 	CurBet		int		// Sum of all bets and raises so far
 }
 
-type PublicGameInfo struct {
-	State		string	// "NOGAME", "CASH", "SITNGO", etc.
+type GameRoom struct {
+	RoomState	string	// "SIGNUP" "POKER"
 	GameSettings	*GameSettings
-	Tables		map[string]*TableState
-	Players		map[string]*Player
+	OrigSettings	*GameSettings
+	Tables		map[string]*TableState	// table0: ...
+	Players		map[string]*Player	// UID: Player
 	CurrentBlinds	[]int
 	BlindTime	int64
-	PausedAt	int64 // Nonzero if paused
-}
-
-type GameEvent struct {
-	EventId		int	// 0..9
-	PlayerId	string	// MadOrangeCow
-	Event		string	// Name for description e.g: "Fold"
-	Args		string	// Parameters. "playerid"
-	Log		string	// "Chris folded". If nil, no log.
+	PausedAt	int64		// Nonzero if paused
+	Password	string		// Password to register as member.
 }
 
 type LogItem struct {
@@ -93,10 +76,12 @@ type LogItems struct {
 	Logs		*[]*LogItem
 }
 
-type Game struct {
+type RoomData struct {
+	// This structure doesn't exist in the DB. Instead, it's used
+	// to pass around information on the server side. We fetch and
+	// populate GameRoom from GameRoom DB entry.
 	Name	string
-	Private	PrivateGameInfo
-	Public	PublicGameInfo
+	Room	GameRoom
 	TX	*firestore.Transaction
 	Logs	[]*LogItem
 }
@@ -118,19 +103,18 @@ const (
 	ERR = 0
 )
 
-func AddEvent(game *Game, playerid string, event string, args interface{}, logmsg string) {
+func AddEvent(game *RoomData, playerid string, event string, args interface{}, logmsg string) {
 }
 
-// values for Public.State
+// values for Public.RoomState
 const (
-	NOGAME = "NOGAME"	// Default
-	INGAME = "INGAME"
+	SIGNUP	= "Signup"
+	POKER	= "Poker"
 )
 
 type GameCommand struct {
 	Name		string
 	PlayerId	string
-	PlayerKey	string
 	Command		string
 	Args		map[string] string
 	ErrorMessage	string
@@ -172,15 +156,13 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("args: %v\n", args)
 
-	var newgame Game
+	var newgame RoomData
 	var settings GameSettings
 
 	settings.GameType = args["GameType"]
 	settings.BetLimit = args["BetLimit"]
 	i64, _ := strconv.ParseInt(args["StartingChips"], 10, 32)
 	settings.StartingChips = int(i64)
-	settings.ChipValues = args["ChipValues"] // We don't bother with this just yet, we pass
-						 // it straight to javascript.
 	allblinds := strings.Split(args["BlindStructure"], ",")
 	settings.BlindStructure	= make([]string, len(allblinds))	// 25 50,25 75,50 100,75 150,...
 
@@ -196,13 +178,10 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newgame.Name = GenerateName()
-	newgame.Private.PlayerKeys = make(map[string]string)
-	newgame.Private.TableDecks = make(map[string][]string)
-	newgame.Private.AdminPassword = args["AdminPassword"]
-	newgame.Private.OrigState = &settings
 
-	newgame.Public.Tables = make(map[string]*TableState)
-	newgame.Public.State = NOGAME
+	newgame.Room.Tables = make(map[string]*TableState)
+	newgame.Room.RoomState = SIGNUP
+	newgame.Room.OrigSettings = &settings
 
 	FIRESTORE_CLIENT.RunTransaction(context.Background(),
 					func(ctx context.Context, tx *firestore.Transaction) error {
@@ -217,34 +196,38 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-type GetStateRequest struct {
-	Name		string
-	Last		int
-	PlayerId	string
-	PlayerKey	string
-}
-
-func FetchGame(name string, tx *firestore.Transaction) *Game {
-	var game Game
-	privRef := FIRESTORE_CLIENT.Doc("private/" + name)
-	priv, err := tx.Get(privRef)
+func FetchData(game *RoomData, name string, ptr interface{}) bool {
+	docRef := FIRESTORE_CLIENT.Doc("games/" + game.Name + "/data/" + name)
+	doc, err := game.TX.Get(docRef)
 	if err != nil {
 		log.Printf("Can't get snapshot: %v\n", err)
-		return nil
+		return false
 	}
-	err = priv.DataTo(&game.Private)
+	err = doc.DataTo(ptr)
 	if err != nil {
-		log.Printf("No priv.datato avail: %v\n", err)
-		return nil
+		log.Printf("No doc.datato avail: %v\n", err)
+		return false
 	}
+	return true
+}
 
-	pubRef := FIRESTORE_CLIENT.Doc("public/" + name)
+func SaveData(game *RoomData, name string, ptr interface{}) {
+	docRef := FIRESTORE_CLIENT.Doc("games/" + game.Name + "/data/" + name)
+	err := game.TX.Set(docRef, ptr)
+	if err != nil {
+		log.Printf("Unable to save game data: %v", err)
+	}
+}
+
+func FetchGame(name string, tx *firestore.Transaction) *RoomData {
+	var game RoomData
+	pubRef := FIRESTORE_CLIENT.Doc("games/" + name)
 	pub, err := tx.Get(pubRef)
 	if err != nil {
 		log.Printf("Can't get snapshot: %v\n", err)
 		return nil
 	}
-	err = pub.DataTo(&game.Public)
+	err = pub.DataTo(&game.Room)
 	if err != nil {
 		log.Printf("No pub.datato avail: %v\n", err)
 		return nil
@@ -254,7 +237,7 @@ func FetchGame(name string, tx *firestore.Transaction) *Game {
 	return &game
 }
 
-func LogEvent(game *Game, name string, fargs ...interface{}) {
+func LogEvent(game *RoomData, name string, fargs ...interface{}) {
 	litem := new(LogItem)
 	litem.Message = ""
 	litem.EventName = name
@@ -263,25 +246,18 @@ func LogEvent(game *Game, name string, fargs ...interface{}) {
 	game.Logs = append(game.Logs, litem)
 }
 
-func LogMessage(game *Game, msg string, fargs ...interface{}) {
+func LogMessage(game *RoomData, msg string, fargs ...interface{}) {
 	litem := new(LogItem)
 	litem.Message = fmt.Sprintf(msg, fargs...)
 	fmt.Println(litem.Message)
 	game.Logs = append(game.Logs, litem)
 }
 
-func SaveGame(game *Game, tx *firestore.Transaction) {
-	// We save to two locations. Private to private/<name>, public to public/<name>
-	privref := FIRESTORE_CLIENT.Doc("private/" + game.Name)
-	err := tx.Set(privref, game.Private)
+func SaveGame(game *RoomData, tx *firestore.Transaction) {
+	pubref := FIRESTORE_CLIENT.Doc("games/" + game.Name)
+	err := tx.Set(pubref, game.Room)
 	if err != nil {
-		fmt.Printf("Error saving private: %v\n", err)
-		return
-	}
-	pubref := FIRESTORE_CLIENT.Doc("public/" + game.Name)
-	err = tx.Set(pubref, game.Public)
-	if err != nil {
-		fmt.Printf("Error saving public: %v\n", err)
+		fmt.Printf("Error saving games: %v\n", err)
 		return
 	}
 
@@ -290,7 +266,7 @@ func SaveGame(game *Game, tx *firestore.Transaction) {
 		litems.Timestamp = time.Now().UnixNano()
 		litems.Logs = &game.Logs
 
-		lname := fmt.Sprintf("public/%s/log/%d", game.Name, litems.Timestamp)
+		lname := fmt.Sprintf("games/%s/log/%d", game.Name, litems.Timestamp)
 		docref := FIRESTORE_CLIENT.Doc(lname)
 		err = game.TX.Set(docref, litems)
 		if err != nil {
@@ -301,17 +277,17 @@ func SaveGame(game *Game, tx *firestore.Transaction) {
 	fmt.Println("Saved", game.Name)
 }
 
-func CheckGameSanity(game *Game, hasCommandWaiting bool) string {
-	if game.Public.State != INGAME {
+func CheckGameSanity(game *RoomData, hasCommandWaiting bool) string {
+	if game.Room.RoomState != POKER {
 		return ""
 	}
 	totalChips := 0
-	for _, table := range game.Public.Tables {
+	for _, table := range game.Room.Tables {
 		turncount := 0
 		betcount := 0
 		totalChips += table.Pot
 		for _, pid := range table.Seats {
-			player := game.Public.Players[pid]
+			player := game.Room.Players[pid]
 			if player.State == TURN {
 				turncount += 1
 			}
@@ -331,7 +307,7 @@ func CheckGameSanity(game *Game, hasCommandWaiting bool) string {
 			return "No TURN or Command going??"
 		}
 	}
-	expectedChips := len(game.Public.Players) * game.Private.OrigState.StartingChips
+	expectedChips := len(game.Room.Players) * game.Room.GameSettings.StartingChips
 
 	if totalChips != expectedChips {
 		return "Chip count mismatch!"
@@ -340,61 +316,53 @@ func CheckGameSanity(game *Game, hasCommandWaiting bool) string {
 	return ""
 }
 
-type StateResponse struct {
-	Name	string
-	GameState	*Game
-	Events		[]GameEvent
-	Last		int
+func RegisterAccount(game *RoomData, gc *GameCommand) bool {
+	return true
 }
 
-func RegisterAccount(game *Game, gc *GameCommand) bool {
-	fmt.Printf("Register: %s %s\n", gc.Args["DisplayName"], gc.Args["Email"])
+type CommandResponse struct {
+	Errmsg	string	// If empty, command was a success.
+	Run	bool	// If game should run commands (immediately)
+	Save	bool	// If game should save
+	Willrun	bool	// If command will deal with running commands. (For sanity check)
+}
 
-	if gc.Args["DisplayName"] == "" || gc.Args["Email"] == "" {
-		return false
-	}
-	for _, p := range game.Public.Players {
-		if p.DisplayName == gc.Args["DisplayName"] {
-			return false
-		}
-	}
+func CError(errmsg string) *CommandResponse {
+	ret := new(CommandResponse)
+	ret.Errmsg = errmsg
+	ret.Run = false
+	ret.Save = false
+	ret.Willrun = false
+	return ret
+}
 
-	var player Player
+func COK() *CommandResponse {
+	ret := new(CommandResponse)
+	ret.Errmsg = ""
+	ret.Run = true
+	ret.Save = true
+	ret.Willrun = true
+	return ret
+}
 
-	player.DisplayName = gc.Args["DisplayName"]
-	player.PlayerId = GenerateName()
-	playerKey := GenerateName()
-	game.Private.PlayerKeys[player.PlayerId] = playerKey
-
-	from := mail.NewEmail("RollPoker NoReply", "no-reply@deafcode.com")
-	subject := "RollPoker for " + gc.Args["DisplayName"]
-	to := mail.NewEmail(gc.Args["DisplayName"], gc.Args["Email"])
-
-	link := BASE_URI + "/table/" + gc.Name + "?id=" + player.PlayerId + "&key=" + playerKey
-
-	plainTextContent := "You have been invited to join a poker game: " + link
-	htmlContent := "<a href=\"" + link + "\">Click here to join the poker game</a>"
-	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
-	sgclient := sendgrid.NewSendClient(SENDGRID_API_KEY)
-	if SEND_EMAIL {
-		_, err := sgclient.Send(message)
-		if err != nil {
-			return false
-		}
-	} else {
-		fmt.Println(link)
-	}
-	if game.Public.Players == nil {
-		game.Public.Players = make(map[string]*Player)
-	}
-	LogMessage(game, "%s has registered.", player.DisplayName)
-	game.Public.Players[player.PlayerId] = &player
-
-	return true
+func CResponse(errmsg string, run, save, willrun bool) *CommandResponse {
+	ret := new(CommandResponse)
+	ret.Errmsg = errmsg
+	ret.Run = run
+	ret.Save = save
+	ret.Willrun = willrun
+	return ret
 }
 
 func Poker(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
+
+	// Only authorized players can run GameCommand commands.
+	var uid = GetUserIDFromHeader(r)
+	if uid == "" {
+		return
+	}
+
 	var gc GameCommand
 	var player *Player = nil
 	err := json.NewDecoder(r.Body).Decode(&gc)
@@ -402,6 +370,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	gc.PlayerId = uid
 	gc.ErrorMessage = ""
 
 	dorun := false
@@ -413,11 +382,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		game := FetchGame(gc.Name, tx)
 		if game == nil {
 			http.Error(w, "Unknown Game", http.StatusBadRequest)
-		}
-
-		pkey, has := game.Private.PlayerKeys[gc.PlayerId]
-		if has && pkey == gc.PlayerKey {
-			player = game.Public.Players[gc.PlayerId]
+			return nil
 		}
 
 		fmt.Println("Got", gc.Command)
@@ -430,24 +395,14 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 			dosave = true
 			dorun = false
 		} else {
-			// TODO: DELETE THIS BEFORE PUSHING.
-			// It's just here for testing
-			if FAKE_COMMANDS {
-				for pid, tplayer := range game.Public.Players {
-					if tplayer.State == TURN {
-						gc.PlayerId = pid
-						player = tplayer
-						break
-					}
-				}
-			}
 			if player == nil {
-				// If PlayerId is nil, the only thing the player can do is "register" / invite.
+				// If player is nil, the only thing the player
+				// can do is "register" / invite.
 				http.Error(w, "You are not a player", http.StatusBadRequest)
 				return nil
 			} else {
 				// Call Command by name if it has one
-				method := reflect.ValueOf(player).MethodByName("Try" + gc.Command)
+				method := reflect.ValueOf(player).MethodByName("Try" + game.Room.RoomState + gc.Command)
 
 				if method.IsValid() {
 					rval := method.Call([]reflect.Value{reflect.ValueOf(game), reflect.ValueOf(&gc)})

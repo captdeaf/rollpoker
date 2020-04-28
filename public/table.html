@@ -8,12 +8,14 @@
     <script type="text/javascript" src="https://www.gstatic.com/firebasejs/7.14.0/firebase-app.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/firebasejs/7.14.0/firebase-auth.js"></script>
     <script type="text/javascript" src="https://www.gstatic.com/firebasejs/7.14.0/firebase-firestore.js"></script>
+    <script type="text/javascript" src="https://cdn.firebase.com/libs/firebaseui/3.5.2/firebaseui.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/3.5.2/firebaseui.css" />
     <script type="text/javascript" src="/underscore-min.js"></script>
     <script type="text/javascript" src="/jquery-3.4.1.min.js"></script>
-    <script type="text/javascript" src="/table.js"></script>
+    <script type="text/javascript" src="/rollpoker.js"></script>
+    <script type="text/javascript" src="/views.js"></script>
+    <script type="text/javascript" src="/register.js"></script>
     <script type="text/javascript" src="/signup.js"></script>
-    <script type="text/javascript" src="/events.js"></script>
-    <script type="text/javascript" src="/poker.js"></script>
   </head>
   <script type="text/template" id="adminlogin">
     <input type="text" name="adminpw" placeholder="Admin Password">
@@ -36,9 +38,9 @@
         <div class="tinfo">Pot: <tt><%= table.Pot %></tt></div>
       </div>
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
-      <div id="<%= player.PlayerId %>" class="playerinfo <%= seat %> <%= player.State %>">
+      <div id="<%= player.uid %>" class="playerinfo <%= seat %> <%= player.State %>">
         <div class="playerhand hand">
-        <% if (player.PlayerId == Poker.PLAYER_ID) { %>
+        <% if (player.uid == Player.uid) { %>
           <% _.each(Table.DecryptMyHand(player.Hand), function(cardval) { %>
             <div class="card <%= cardval %>"></div>
           <% }); %>
@@ -48,7 +50,7 @@
           <% }); %>
         <% } %>
         </div>
-        <% if (player.PlayerId == table.Seats[table.Dealer]) { %>
+        <% if (player.uid == table.Seats[table.Dealer]) { %>
           <div class="dealerbutton"></div>
         <% } %>
         <div class="playerdata <%= player.State %>">
@@ -77,7 +79,7 @@
   </script>
   <script type="text/template" id="menucontents">
     <div id="closemenu"><tt>X</tt> GAME MENU:</div>
-    <label>Name: <input type="text" class="menutext" placeholder="Display Name" name="DisplayName" value="<%= Poker.PLAYER.DisplayName %>"></label><br>
+    <label>Name: <input type="text" class="menutext" placeholder="Display Name" name="DisplayName" value="<%= Player.info.DisplayName %>"></label><br>
     <% if (window.Notification && window.Notification.permission != "granted") { %>
       <button id="notifications">Enable Notifications</button>
     <% } %>
@@ -85,13 +87,13 @@
   <script type="text/template" id="tableview">
     <div id="tables">
       <div id="mytable" class="pokertable"></div>
-      <% if (Poker.PLAYER) { %>
+      <% if (Player.uid) { %>
       <div class="cardsettings" id="cardsettings"></div>
       <div id="menu"></div>
       <% } %>
     </div>
     <div id="logscreen"></div>
-    <% if (Poker.PLAYER && Poker.PLAYER.State != "BUSTED") { %>
+    <% if (Player.uid && Player.state != "BUSTED") { %>
       <div id="lower">
         <div id="myhand" class="grow myhand"></div>
         <div id="indicator" class="indicator"></div><br>
@@ -114,28 +116,31 @@
       <button class="bet" name="betadd">+ BB</button>
     </div>
   </script>
-  <script type="text/template" id="signupview">
+  <script type="text/template" id="joinview">
     <h3>Players currently involved:</h3>
     <div id="signups">
+      <ul>
+      <% for (var uid in data.Players) { var pl = data.Players[uid]; %>
+        <li id="<%= uid %>">
+        <div class="playername"><%= pl.DisplayName %><% if (Player.uid == uid) { %> (You!)<% } %></div>
+        </li>
+      <% } %>
+      </ul>
     </div>
     <div class="invites" style="width: 400px; padding: 0.5em; border: 1px solid black;">
-    <form id="joingameform">
+    <form id="joinup">
       <input type="text" name="DisplayName" placeholder="Display Name" value=""><br>
-      <input type="text" name="Email" placeholder="Email Address" value=""><br><i>We only use an email address once, to send an invite link to, it is never saved.</i><br>
-      <button id="joingame">Send Invitation to Email</button>
+      <input type="text" name="Roompass" placeholder="Game Password" value=""><br><br>
+      <button>Join</button>
     </form>
     </div>
-    <button id="leavegame" class="gamebutton">Leave the Game</button>
     <button id="startgame" class="gamebutton">Start the Game!</button>
   </script>
-  <script type="text/template" id="signuplist">
-    <ul>
-    <% for (var pid in Players) { var pl = Players[pid]; %>
-      <li id="<%= pid %>">
-      <div class="playername"><%= pl.DisplayName %><% if (Poker.PLAYER_ID == pid) { %> (You!)<% } %></div>
-      </li>
-    <% } %>
-    </ul>
+  <script type="text/template" id="registerview">
+    Hello - To view and join any of the game tables in RollPoker, you must register or
+    log in.<br>
+    <br>
+    <div id="firebase-register"></div>
   </script>
   <body>
   </body>

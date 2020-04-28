@@ -1,3 +1,4 @@
+// Player Commands for Poker
 package rollpoker
 
 import (
@@ -8,32 +9,29 @@ import (
 	"strconv"
 )
 
-func (player *Player) TryKick(game *Game, gc *GameCommand) int {
+func (player *Player) TryPokerKick(game *RoomData, gc *GameCommand) int {
 	return SAVE|RUN
 }
 
-func (player *Player) TryStartGame(game *Game, gc *GameCommand) int {
+func (player *Player) TrySignupStartPoker(game *RoomData, gc *GameCommand) *CommandResponse {
 	// Sanity checks:
-	if game.Public.State != NOGAME { return ERR }
-	if len(game.Public.Players) < 2 { return ERR }
+	if len(game.Room.Players) < 2 { return CError("Not enough players") }
 	// TODO: MTT support
-	if len(game.Public.Players) > 10 { return ERR }
+	if len(game.Room.Players) > 10 { return CError("Too many players for now") }
 
 	// So, we're trying to start a game.
 	// 1) Do we have enough players? Do we need multiple tables?
 	allPlayers := []string{}
+	settings := game.Room.OrigSettings
+	game.Room.GameSettings = settings
 
-	// Deep copy the Settings structure.
-	settings := *(game.Private.OrigState)
-	game.Public.GameSettings = &settings
-
-	for _, player := range game.Public.Players {
+	for _, player := range game.Room.Players {
 		allPlayers = append(allPlayers, player.PlayerId)
 		player.Chips = settings.StartingChips
 		player.Bet = 0
 		player.Rank = 0
 		player.State = ""
-		player.Hand = ""
+		player.Hand = make([]string, 0)
 	}
 	if len(allPlayers) > 10 {
 		// TODO: Multiple tables
@@ -50,7 +48,7 @@ func (player *Player) TryStartGame(game *Game, gc *GameCommand) int {
 	})
 
 	// 3) Populate TableState from GameSettings and choose Dealer at random.
-	game.Public.Tables = make(map[string]*TableState)
+	game.Room.Tables = make(map[string]*TableState)
 	table := TableState{}
 	table.Seats = map[string]string{};
 	for seatnum, pid := range allPlayers {
@@ -58,25 +56,25 @@ func (player *Player) TryStartGame(game *Game, gc *GameCommand) int {
 	}
 	// First player is dealer, because player position is random, anyway.
 	table.Dealer = ""
-	game.Public.Tables["table0"] = &table
+	game.Room.Tables["table0"] = &table
 	table.Dolist = make(GameDef, len(GAME_COMMANDS["texasholdem"]))
 	copy(table.Dolist, GAME_COMMANDS["texasholdem"])
 	fmt.Printf("Got: %v\n", table.Dolist)
 
-	blindstr := game.Public.GameSettings.BlindStructure[0]
-	if len(game.Public.GameSettings.BlindStructure) > 0 {
-		game.Public.GameSettings.BlindStructure = game.Public.GameSettings.BlindStructure[1:]
+	blindstr := game.Room.GameSettings.BlindStructure[0]
+	if len(game.Room.GameSettings.BlindStructure) > 0 {
+		game.Room.GameSettings.BlindStructure = game.Room.GameSettings.BlindStructure[1:]
 	}
 
 	blindsplit := strings.Fields(blindstr)
-	game.Public.CurrentBlinds = make([]int,len(blindsplit))
-	game.Public.BlindTime = 0 // TODO: Now + blindTime.
-	game.Public.PausedAt = 0
-	game.Public.State = INGAME
+	game.Room.CurrentBlinds = make([]int,len(blindsplit))
+	game.Room.BlindTime = 0 // TODO: Now + blindTime.
+	game.Room.PausedAt = 0
+	game.Room.RoomState = POKER
 
 	for i, val := range blindsplit {
 		ival, _ := strconv.ParseInt(val, 10, 32)
-		game.Public.CurrentBlinds[i] = int(ival)
+		game.Room.CurrentBlinds[i] = int(ival)
 	}
 
 	// TODO: Trigger start on all tables
@@ -84,18 +82,19 @@ func (player *Player) TryStartGame(game *Game, gc *GameCommand) int {
 	// Don't start the RunCommands - this is special, we want to
 	// run the start for All tables by hand
 	i := time.Duration(1)
-	for tname, _ := range game.Public.Tables {
+	for tname, _ := range game.Room.Tables {
 		go RunCommands(game.Name, tname, i)
 		i += 1
 	}
 	LogMessage(game, "%s starts the game", player.DisplayName)
-	return SAVE
+	// We handle RunCommands, so we return special CommandResponse instead of COK
+	return CResponse("", false, true, true)
 }
 
-func (player *Player) TryCheck(game *Game, gc *GameCommand) int {
+func (player *Player) TryPokerCheck(game *RoomData, gc *GameCommand) int {
 	if player.State != TURN { return ERR }
 	tablename := game.TableForPlayer(player)
-	table := game.Public.Tables[tablename]
+	table := game.Room.Tables[tablename]
 
 	remaining := table.CurBet - player.Bet
 	if remaining > 0 {
@@ -108,7 +107,7 @@ func (player *Player) TryCheck(game *Game, gc *GameCommand) int {
 	return SAVE|RUN
 }
 
-func (player *Player) TryFold(game *Game, gc *GameCommand) int {
+func (player *Player) TryPokerFold(game *RoomData, gc *GameCommand) int {
 	if player.State != TURN { return ERR }
 	tablename := game.TableForPlayer(player)
 
@@ -118,10 +117,10 @@ func (player *Player) TryFold(game *Game, gc *GameCommand) int {
 	return SAVE|RUN
 }
 
-func (player *Player) TryCall(game *Game, gc *GameCommand) int {
+func (player *Player) TryPokerCall(game *RoomData, gc *GameCommand) int {
 	if player.State != TURN { return ERR }
 	tablename := game.TableForPlayer(player)
-	table := game.Public.Tables[tablename]
+	table := game.Room.Tables[tablename]
 
 	remaining := table.CurBet - player.Bet
 	if remaining > player.Chips {
@@ -140,11 +139,11 @@ func (player *Player) TryCall(game *Game, gc *GameCommand) int {
 	return SAVE|RUN
 }
 
-func (player *Player) TryBet(game *Game, gc *GameCommand) int {
+func (player *Player) TryPokerBet(game *RoomData, gc *GameCommand) int {
 	// This can be a Check, a Call, a Bet, or a Raise, depending on amount.
 	if player.State != TURN { return ERR }
 	tablename := game.TableForPlayer(player)
-	table := game.Public.Tables[tablename]
+	table := game.Room.Tables[tablename]
 	i64bet, ierr := strconv.ParseInt(gc.Args["amount"], 10, 32)
 	ibet := int(i64bet)
 
@@ -156,7 +155,7 @@ func (player *Player) TryBet(game *Game, gc *GameCommand) int {
 	if total == 0 {
 		// Somebody using call as check.
 		fmt.Printf("Call/Check")
-		return player.TryCheck(game, gc)
+		return player.TryPokerCheck(game, gc)
 	}
 	// Total bet by player:
 	if ibet >= player.Chips {

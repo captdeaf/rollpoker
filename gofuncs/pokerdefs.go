@@ -1,3 +1,4 @@
+// Game DSLs for Poker-style games.
 package rollpoker
 
 import (
@@ -17,9 +18,13 @@ type GameCmd struct {
 	Sleepfor time.Duration	// How long to sleep after this event
 }
 
+type TableData struct {
+	Deck []string
+}
+
 type GameDef []GameCmd
 
-func (game *Game) Shuffle(tablename string, _ int) bool {
+func (game *RoomData) Shuffle(tablename string, _ int) bool {
 	DECK := []string{
 		"sa", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "st", "sj", "sq", "sk",
 		"ha", "h2", "h3", "h4", "h5", "h6", "h7", "h8", "h9", "ht", "hj", "hq", "hk",
@@ -34,56 +39,75 @@ func (game *Game) Shuffle(tablename string, _ int) bool {
 	rand.Shuffle(len(deckcopy), func(i, j int) {
 		deckcopy[i], deckcopy[j] = deckcopy[j], deckcopy[i]
 	})
-	game.Private.TableDecks[tablename] = deckcopy
+	var tdata *TableData
+	FetchData(game, tablename, &tdata)
+	tdata.Deck = deckcopy
+	SaveData(game, tablename, &tdata)
 	return true // We're done shuffling.
 }
 
-func (game *Game) Burn(tablename string, _ int) bool {
-	deck := game.Private.TableDecks[tablename]
-	game.Private.TableDecks[tablename] = deck[1:]
+func (game *RoomData) Burn(tablename string, _ int) bool {
+	var tdata *TableData
+	FetchData(game, tablename, &tdata)
+	tdata.Deck = tdata.Deck[1:]
+	SaveData(game, tablename, &tdata)
 	return true
 }
 
-func (game *Game) TexFlop(tablename string, _ int) bool {
-	table := game.Public.Tables[tablename]
-	deck := game.Private.TableDecks[tablename]
-	flop := deck[:3]
+func (game *RoomData) TexFlop(tablename string, _ int) bool {
+	table := game.Room.Tables[tablename]
+	var tdata *TableData
+	FetchData(game, tablename, &tdata)
+
+	flop := tdata.Deck[:3]
 	table.Cards["board"] = flop
-	game.Private.TableDecks[tablename] = deck[3:]
-	LogEvent(game, "Board", flop[0], flop[1], flop[2])
+	tdata.Deck = tdata.Deck[3:]
+	LogEvent(game, "Board", strings.Join(flop, " "))
 	LogMessage(game, "Flop: <<%s>>", strings.Join(flop, ">>,<<"))
+
+	SaveData(game, tablename, &tdata)
 	return true
 }
 
-func (game *Game) TexTurn(tablename string, _ int) bool {
-	table := game.Public.Tables[tablename]
-	deck := game.Private.TableDecks[tablename]
-	table.Cards["board"] = append(table.Cards["board"], deck[0])
-	LogEvent(game, "Board", deck[0])
-	LogMessage(game, "Turn: <<%s>>", deck[0])
-	game.Private.TableDecks[tablename] = deck[1:]
+func (game *RoomData) TexTurn(tablename string, _ int) bool {
+	table := game.Room.Tables[tablename]
+	var tdata *TableData
+	FetchData(game, tablename, &tdata)
+
+	table.Cards["board"] = append(table.Cards["board"], tdata.Deck[0])
+	LogEvent(game, "Board", tdata.Deck[0])
+	LogMessage(game, "Turn: <<%s>>", tdata.Deck[0])
+
+	tdata.Deck = tdata.Deck[1:]
+
+	SaveData(game, tablename, &tdata)
 	return true
 }
 
-func (game *Game) TexRiver(tablename string, _ int) bool {
-	table := game.Public.Tables[tablename]
-	deck := game.Private.TableDecks[tablename]
-	table.Cards["board"] = append(table.Cards["board"], deck[0])
-	LogEvent(game, "Board", deck[0])
-	LogMessage(game, "River: <<%s>>", deck[0])
-	game.Private.TableDecks[tablename] = deck[1:]
+func (game *RoomData) TexRiver(tablename string, _ int) bool {
+	table := game.Room.Tables[tablename]
+	var tdata *TableData
+	FetchData(game, tablename, &tdata)
+
+	table.Cards["board"] = append(table.Cards["board"], tdata.Deck[0])
+	LogEvent(game, "Board", tdata.Deck[0])
+	LogMessage(game, "Turn: <<%s>>", tdata.Deck[0])
+
+	tdata.Deck = tdata.Deck[1:]
+
+	SaveData(game, tablename, &tdata)
 	return true
 }
 
-func (game *Game) BustOut(tablename string, _ int) bool {
-	table := game.Public.Tables[tablename]
+func (game *RoomData) BustOut(tablename string, _ int) bool {
+	table := game.Room.Tables[tablename]
 	busts := make([]*Player, 0)
 	ranking := 0
-	for _, table := range game.Public.Tables {
+	for _, table := range game.Room.Tables {
 		ranking += len(table.Seats)
 	}
 	for seat, pid := range table.Seats {
-		player := game.Public.Players[pid]
+		player := game.Room.Players[pid]
 		if player.Chips == 0 {
 			busts = append(busts, player)
 			delete(table.Seats, seat)
@@ -103,8 +127,8 @@ func (game *Game) BustOut(tablename string, _ int) bool {
 	return true
 }
 
-func (game *Game) NewGame(tablename string, _ int) bool {
-	table := game.Public.Tables[tablename]
+func (game *RoomData) NewGame(tablename string, _ int) bool {
+	table := game.Room.Tables[tablename]
 	table.Dolist = make(GameDef, len(GAME_COMMANDS["texasholdem"]))
 	table.Dealer = GetNextPlayer(game, table, table.Dealer)
 	copy(table.Dolist, GAME_COMMANDS["texasholdem"])
@@ -113,27 +137,29 @@ func (game *Game) NewGame(tablename string, _ int) bool {
 	return true
 }
 
-func (game *Game) DealAllDown(tablename string, count int) bool {
+func (game *RoomData) DealAllDown(tablename string, count int) bool {
 	// Just for kicks, though our users will never know, let's deal it as if
 	// it's a real poker game.
-	table := game.Public.Tables[tablename]
+	table := game.Room.Tables[tablename]
 	order := GetNextPlayers(game, table, table.Dealer)
-	deck := game.Private.TableDecks[tablename]
+
+	var tdata *TableData
+	FetchData(game, tablename, &tdata)
 
 	var idx = 0
 
 	for i := 0; i < count; i++ {
 		for _, seat := range order {
-			player := game.Public.Players[table.Seats[seat]]
-			pkey := game.Private.PlayerKeys[player.PlayerId]
-			h := DecryptHand(player.Hand, pkey)
-			player.Hand = EncryptHand(h + deck[idx], pkey)
+			player := game.Room.Players[table.Seats[seat]]
+			player.Hand = append(player.Hand, tdata.Deck[idx])
 			idx += 1
 		}
 	}
-	game.Private.TableDecks[tablename] = deck[idx:]
+	tdata.Deck = tdata.Deck[idx:]
 	LogEvent(game, "Dealing", count, "DOWN")
 	LogMessage(game, "Dealing %d cards to each player", count)
+
+	SaveData(game, tablename, &tdata)
 
 	return true
 }
@@ -153,12 +179,12 @@ type PlayerHand struct {
 	Score	int
 }
 
-func MakePots(game *Game, table *TableState) []*Pot {
+func MakePots(game *RoomData, table *TableState) []*Pot {
 	stillins := make([]*Player, 0)
 	seenpots := make(map[int]bool)
 	table.Pot = 0
 	for _, pid := range table.Seats {
-		player := game.Public.Players[pid]
+		player := game.Room.Players[pid]
 		if player.State != FOLDED {
 			stillins = append(stillins, player)
 			seenpots[player.TotalBet] = true
@@ -179,7 +205,7 @@ func MakePots(game *Game, table *TableState) []*Pot {
 	sort.Slice(pots, func(i, j int) bool { return pots[i].BetAmount < pots[j].BetAmount })
 	for idx = 0; idx < len(pots); idx++ {
 		for _, pid := range table.Seats {
-			player := game.Public.Players[pid]
+			player := game.Room.Players[pid]
 			// We can get from (taken) to (max) chips
 			max := pots[idx].BetAmount
 			if (max > player.TotalBet) {
@@ -200,7 +226,7 @@ func MakePots(game *Game, table *TableState) []*Pot {
 	return pots
 }
 
-func PayoutPots(game *Game, pots []*Pot, hands []*PlayerHand) {
+func PayoutPots(game *RoomData, pots []*Pot, hands []*PlayerHand) {
 	// Sort in reverse, so greatest first
 	sort.Slice(hands, func(i, j int) bool { return hands[i].Hand > hands[j].Hand })
 	// Map PlayerId to Hands
@@ -228,7 +254,8 @@ func PayoutPots(game *Game, pots []*Pot, hands []*PlayerHand) {
 				ph := idScore[player.PlayerId]
 				pots[i].Winners = append(pots[i].Winners, player)
 				// We have a winner, show this player's cards.
-				player.Hand = strings.Join(GetHandVals(game, player), "")
+				// TODO TODO TODO Get player handvals
+				// player.Hand = strings.Join(GetHandVals(game, player), "")
 				LogEvent(game, "Win", player.PlayerId, pots[i].Chips, ph.Hand, strings.Join(ph.Cards," "))
 				LogMessage(game, "%s wins the %d-chip pot with %s: <<%s>>",
 						 player.DisplayName, pots[i].Chips,
@@ -244,7 +271,7 @@ func PayoutPots(game *Game, pots []*Pot, hands []*PlayerHand) {
 	}
 }
 
-func DivvyPot(game *Game, pot *Pot) {
+func DivvyPot(game *RoomData, pot *Pot) {
 	// pot.Winners contains the players that won.
 	// pot.Chips contains how many chips to give out.
 	fmt.Println("Pot to pay out:")
@@ -267,23 +294,25 @@ func DivvyPot(game *Game, pot *Pot) {
 	pot.Winners[0].Chips += pot.Chips - total
 }
 
-func (game *Game) TexWin(tablename string, _ int) bool {
+func (game *RoomData) TexWin(tablename string, _ int) bool {
 	// This is called at end of a hand, with at least 2 players in.
 	// 1) Order still-in players by hand rank.
 	// 2) For each still-in player, in order from best to worst,
 	//    2a) Take their TotalBet chips from the rest's TotalBets.
 	//    2b) Any player w/ 0 chips left from TotalBets is busted out.
-	table := game.Public.Tables[tablename]
+	table := game.Room.Tables[tablename]
 	pots := MakePots(game, table)
 	allhands := make([]*PlayerHand, len(table.Seats))
 	idx := 0
 
 	// Determine winners, and set their State to what they had.
 	for _, pid := range table.Seats {
-		player := game.Public.Players[pid]
+		player := game.Room.Players[pid]
 		allhands[idx] = new(PlayerHand)
 		allhands[idx].Player = player
-		hand := GetHandVals(game, player)
+		// TODO TODO TODO Get player hand
+		// hand := GetHandVals(game, player)
+		hand := []string{}
 		if player.State != FOLDED {
 			allhands[idx].Cards, allhands[idx].Hand, allhands[idx].Score = GetTexasRank(hand, table.Cards["board"])
 		} else {
@@ -297,13 +326,13 @@ func (game *Game) TexWin(tablename string, _ int) bool {
 	return true
 }
 
-func (game *Game) FoldedWin(tablename string, _ int) bool {
+func (game *RoomData) FoldedWin(tablename string, _ int) bool {
 	// There should only be one active player when this is called.
 	// All others should be FOLDED
-	table := game.Public.Tables[tablename]
+	table := game.Room.Tables[tablename]
 	active := []*Player{}
 	for _, playerid := range table.Seats {
-		player := game.Public.Players[playerid]
+		player := game.Room.Players[playerid]
 
 		if player.State != FOLDED {
 			active = append(active, player)
@@ -323,22 +352,22 @@ func (game *Game) FoldedWin(tablename string, _ int) bool {
 	return true
 }
 
-func (game *Game) ResetHand(tablename string, _ int) bool {
-	table := game.Public.Tables[tablename]
+func (game *RoomData) ResetHand(tablename string, _ int) bool {
+	table := game.Room.Tables[tablename]
 	table.Pot = 0
 	for _, playerid := range table.Seats {
-		game.Public.Players[playerid].Bet = 0
-		game.Public.Players[playerid].TotalBet = 0
-		game.Public.Players[playerid].Hand = ""
-		game.Public.Players[playerid].State = WAITING
-		game.Public.Players[playerid].DisplayState = ""
+		game.Room.Players[playerid].Bet = 0
+		game.Room.Players[playerid].TotalBet = 0
+		game.Room.Players[playerid].Hand = make([]string, 0)
+		game.Room.Players[playerid].State = WAITING
+		game.Room.Players[playerid].DisplayState = ""
 		table.Cards = make(map[string][]string)
 	}
 	return true
 }
 
-func (game *Game) TableFor(playerid string) string {
-	for tn, table := range game.Public.Tables {
+func (game *RoomData) TableFor(playerid string) string {
+	for tn, table := range game.Room.Tables {
 		for _, pid := range table.Seats {
 			if playerid == pid {
 				return tn
@@ -348,25 +377,25 @@ func (game *Game) TableFor(playerid string) string {
 	return ""
 }
 
-func (game *Game) TableForPlayer(player *Player) string {
+func (game *RoomData) TableForPlayer(player *Player) string {
 	return game.TableFor(player.PlayerId)
 }
 
-func DoChoose(game *Game, tablename, playerid, state, dstate string) {
-	player := game.Public.Players[playerid]
+func DoChoose(game *RoomData, tablename, playerid, state, dstate string) {
+	player := game.Room.Players[playerid]
 	player.State = state
 	player.DisplayState = dstate
 }
 
-func DoFold(game *Game, tablename, playerid string) {
-	player := game.Public.Players[playerid]
-	player.Hand = ""
+func DoFold(game *RoomData, tablename, playerid string) {
+	player := game.Room.Players[playerid]
+	player.Hand = make([]string, 0)
 	DoChoose(game, tablename, playerid, FOLDED, "Folded")
 }
 
-func DoCall(game *Game, tablename, playerid string, amt int) {
-	player := game.Public.Players[playerid]
-	table := game.Public.Tables[tablename]
+func DoCall(game *RoomData, tablename, playerid string, amt int) {
+	player := game.Room.Players[playerid]
+	table := game.Room.Tables[tablename]
 	if player.Chips <= amt {
 		amt = player.Chips
 	}
@@ -383,17 +412,17 @@ func DoCall(game *Game, tablename, playerid string, amt int) {
 	}
 }
 
-func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
-	player := game.Public.Players[playerid]
-	table := game.Public.Tables[tablename]
+func DoBet(game *RoomData, tablename, playerid string, amt int, auto bool) {
+	player := game.Room.Players[playerid]
+	table := game.Room.Tables[tablename]
 	// Reset all other CALLED and BET players' states to WAITING
 	if !auto {
 		for _, pid := range table.Seats {
-			if (game.Public.Players[pid].State == CALLED || game.Public.Players[pid].State == BET) {
-				if (game.Public.Players[pid].Chips == 0) {
-					game.Public.Players[pid].State = ALLIN
+			if (game.Room.Players[pid].State == CALLED || game.Room.Players[pid].State == BET) {
+				if (game.Room.Players[pid].Chips == 0) {
+					game.Room.Players[pid].State = ALLIN
 				} else {
-					game.Public.Players[pid].State = WAITING
+					game.Room.Players[pid].State = WAITING
 					// No change to other players' display states.
 				}
 			}
@@ -424,42 +453,42 @@ func DoBet(game *Game, tablename, playerid string, amt int, auto bool) {
 	}
 }
 
-func (game *Game) HoldemBlinds(tablename string, _ int) bool {
+func (game *RoomData) HoldemBlinds(tablename string, _ int) bool {
 	// Called on game start: Make first two players to left of dealer
 	// do their blind bets, set all players WAITING (if not ALLIN)
-	table := game.Public.Tables[tablename]
+	table := game.Room.Tables[tablename]
 	table.Pot = 0
 	order := GetNextPlayers(game, table, table.Dealer)
 	if len(order) < 2 { return false }
 	names := []string{"(small blind)", "(big blind)", "(blind)"}
 	for idx, seat := range order {
 		playerid := table.Seats[seat]
-		if idx < len(game.Public.CurrentBlinds) {
+		if idx < len(game.Room.CurrentBlinds) {
 			// DoBet sets ALLIN if needed
-			player := game.Public.Players[playerid]
+			player := game.Room.Players[playerid]
 			if idx < len(names) {
 				player.DisplayState = names[idx]
 			} else {
 				player.DisplayState = names[len(names)-1]
 			}
-			DoBet(game, tablename, playerid, game.Public.CurrentBlinds[idx], true)
+			DoBet(game, tablename, playerid, game.Room.CurrentBlinds[idx], true)
 		} else {
 			break
 		}
 	}
-	table.CurBet = game.Public.CurrentBlinds[len(game.Public.CurrentBlinds)-1]
-	table.MinBet = game.Public.CurrentBlinds[len(game.Public.CurrentBlinds)-1]
+	table.CurBet = game.Room.CurrentBlinds[len(game.Room.CurrentBlinds)-1]
+	table.MinBet = game.Room.CurrentBlinds[len(game.Room.CurrentBlinds)-1]
 	return true
 }
 
-func (game *Game) ClearBets(tablename string, _ int) bool {
+func (game *RoomData) ClearBets(tablename string, _ int) bool {
 	// ClearBets does three things:
 	// 1) Sets any active players WAITING
 	// 2) Sets any active players with 0 chips ALLIN
 	// 3) Sets table.MinBet and table.CurBet
-	table := game.Public.Tables[tablename]
+	table := game.Room.Tables[tablename]
 	for _, pid := range table.Seats {
-		player := game.Public.Players[pid]
+		player := game.Room.Players[pid]
 		if player.State != FOLDED {
 			if player.Chips == 0 {
 				player.State = ALLIN
@@ -470,12 +499,12 @@ func (game *Game) ClearBets(tablename string, _ int) bool {
 			}
 		}
 	}
-	table.MinBet = game.Public.CurrentBlinds[len(game.Public.CurrentBlinds) - 1]
+	table.MinBet = game.Room.CurrentBlinds[len(game.Room.CurrentBlinds) - 1]
 	table.CurBet = 0
 	return true
 }
 
-func (game *Game) BetRound(tablename string, _ int) bool {
+func (game *RoomData) BetRound(tablename string, _ int) bool {
 	// BetRound() is called at the start of a betting round, and when any
 	// bet, call, fold, etc is made. Simple check: If any WAITING,
 	// or only one WAITING and the rest ALLIN or FOLDED, we return true
@@ -488,7 +517,7 @@ func (game *Game) BetRound(tablename string, _ int) bool {
 	allins := []string{}  // Players with ALLIN status. Can't bet, but still in game
 	called := []string{}  // players with BET or CALLED status
 
-	table := game.Public.Tables[tablename]
+	table := game.Room.Tables[tablename]
 
 	dealorder := GetNextPlayers(game, table, table.Dealer)
 
@@ -498,7 +527,7 @@ func (game *Game) BetRound(tablename string, _ int) bool {
 
 	for _, seat := range dealorder {
 		pid := table.Seats[seat]
-		player := game.Public.Players[pid]
+		player := game.Room.Players[pid]
 		if player.Bet > betmin {
 			betmin = player.Bet
 			betseat = seat
@@ -533,17 +562,16 @@ func (game *Game) BetRound(tablename string, _ int) bool {
 		allins = append(allins, waiting...)
 		washidden := false
 		for _, playerid := range allins {
-			player := game.Public.Players[playerid]
-			pkey := game.Private.PlayerKeys[player.PlayerId]
-			if player.Hand[0:1] == "!" {
-				washidden = true
-				player.Hand = DecryptHand(player.Hand, pkey)
-			}
+			player := game.Room.Players[playerid]
+			player.Hand = []string{}
+			// TODO TODO TODO Get player hand
 		}
 		if washidden {
 			for _, playerid := range allins {
-				player := game.Public.Players[playerid]
-				hand := GetHandVals(game, player)
+				player := game.Room.Players[playerid]
+				// TODO TODO TODO Get player hand
+				// hand := GetHandVals(game, player)
+				hand := []string{}
 				LogMessage(game, "%s has: <<%s>>", player.DisplayName, strings.Join(hand, ">>,<<"))
 			}
 		}
@@ -559,7 +587,7 @@ func (game *Game) BetRound(tablename string, _ int) bool {
 
 	for _, seat := range nextorder {
 		pid := table.Seats[seat]
-		player := game.Public.Players[pid]
+		player := game.Room.Players[pid]
 		if player.State == WAITING {
 			player.State = TURN
 			player.DisplayState = "Betting"
@@ -570,15 +598,15 @@ func (game *Game) BetRound(tablename string, _ int) bool {
 	return false
 }
 
-func (game *Game) Idle(_ string, _ int) bool {
+func (game *RoomData) Idle(_ string, _ int) bool {
 	return true
 }
 
-func (game *Game) CollectPot(tablename string, _ int) bool {
-	table := game.Public.Tables[tablename]
+func (game *RoomData) CollectPot(tablename string, _ int) bool {
+	table := game.Room.Tables[tablename]
 	amt := 0
 	for _, pid := range table.Seats {
-		player := game.Public.Players[pid]
+		player := game.Room.Players[pid]
 		amt += player.Bet
 		player.Bet = 0
 	}
@@ -586,7 +614,7 @@ func (game *Game) CollectPot(tablename string, _ int) bool {
 	return true
 }
 
-func GetNextPlayers(game *Game, table *TableState, seat string) []string {
+func GetNextPlayers(game *RoomData, table *TableState, seat string) []string {
 	// We have a table to deal out to. Table has Seats, in string order.
 	// We pull them out, order by seat#, then rotate Dealer, and rotate
 	// array around Dealer
@@ -612,12 +640,12 @@ func GetNextPlayers(game *Game, table *TableState, seat string) []string {
 	return orderedSeats
 }
 
-func GetNextPlayer(game *Game, table *TableState, seat string) string {
+func GetNextPlayer(game *RoomData, table *TableState, seat string) string {
 	return GetNextPlayers(game, table, seat)[0]
 }
 
-func RunCommandInTransaction(game *Game, tablename string) time.Duration {
-	table := game.Public.Tables[tablename]
+func RunCommandInTransaction(game *RoomData, tablename string) time.Duration {
+	table := game.Room.Tables[tablename]
 	cmd := table.Dolist[0]
 
 	method := reflect.ValueOf(game).MethodByName(cmd.Name)
@@ -634,13 +662,13 @@ func RunCommandInTransaction(game *Game, tablename string) time.Duration {
 		fmt.Printf("Popping: %s\n", cmd.Name)
 		table.Dolist = table.Dolist[1:]
 		fmt.Printf("Next: %v\n", table.Dolist[0])
-		fmt.Printf("Nextg: %v\n", game.Public.Tables[tablename].Dolist[0])
+		fmt.Printf("Nextg: %v\n", game.Room.Tables[tablename].Dolist[0])
 		return cmd.Sleepfor
 	}
 	return -1
 }
 
-func RunCommandLoop(game *Game, tablename string) time.Duration {
+func RunCommandLoop(game *RoomData, tablename string) time.Duration {
 	for {
 		ret := RunCommandInTransaction(game, tablename)
 		sanity := CheckGameSanity(game, ret >= 0)
