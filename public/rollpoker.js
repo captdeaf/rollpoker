@@ -34,13 +34,18 @@ var RollPoker = {
       if (user) {
         console.log("Registered as " + user.displayName);
         Player.uid = user.uid;
+        Player.authuser = user;
         user.getIdToken().then(function(token) {
           RollPoker.HEADERS["Authorization"] = "Bearer " + token;
         });
+        cb();
       } else {
         console.log("Not registered");
+        RollPoker.Update({
+          RoomState: "Register",
+          Players: [],
+        });
       }
-      cb();
     });
   },
   Setup: function() {
@@ -118,7 +123,7 @@ var RollPoker = {
       RollPoker.Update(doc.data());
     }, function(error) {
       RollPoker.Update({
-        RoomState: "Register",
+        RoomState: "Signup",
         Players: [],
       });
     });

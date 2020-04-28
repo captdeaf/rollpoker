@@ -117,24 +117,30 @@
     </div>
   </script>
   <script type="text/template" id="joinview">
-    <h3>Players currently involved:</h3>
-    <div id="signups">
-      <ul>
-      <% for (var uid in data.Players) { var pl = data.Players[uid]; %>
-        <li id="<%= uid %>">
-        <div class="playername"><%= pl.DisplayName %><% if (Player.uid == uid) { %> (You!)<% } %></div>
-        </li>
-      <% } %>
-      </ul>
-    </div>
+    <% if (data.Players && data.Players.length > 0) { %>
+      <h3>Players currently involved:</h3>
+      <div id="signups">
+        <ul>
+        <% for (var uid in data.Players) { var pl = data.Players[uid]; %>
+          <li id="<%= uid %>">
+          <div class="playername"><%= pl.DisplayName %><% if (Player.uid == uid) { %> (You!)<% } %></div>
+          </li>
+        <% } %>
+        </ul>
+      </div>
+      <button id="startgame" class="gamebutton">Start the Game!</button>
+    <% } else { %>
     <div class="invites" style="width: 400px; padding: 0.5em; border: 1px solid black;">
-    <form id="joinup">
-      <input type="text" name="DisplayName" placeholder="Display Name" value=""><br>
-      <input type="text" name="Roompass" placeholder="Game Password" value=""><br><br>
-      <button>Join</button>
-    </form>
+      Sign up to view this game:<br>
+      <br>
+      <form id="joinup">
+        <label>Display Name: <input type="text" name="DisplayName" placeholder="Display Name" value="<%= Player.authuser.displayName %>"></label><br>
+        <br>
+        <label>Room Password: <input type="text" name="Roompass" placeholder="Game Password" value=""></label><br><br>
+        <button>Join</button>
+      </form>
     </div>
-    <button id="startgame" class="gamebutton">Start the Game!</button>
+    <% } %>
   </script>
   <script type="text/template" id="registerview">
     Hello - To view and join any of the game tables in RollPoker, you must register or
