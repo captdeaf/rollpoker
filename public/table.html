@@ -131,21 +131,28 @@
     <% } %>
     <div class="invites" style="width: 400px; padding: 0.5em; border: 1px solid black;">
       <br>
-      <br>
       <% if (Player.info) { %>
-        <button id="startgame" class="gamebutton">Start the Tournament!</button>
+        You are registered for the upcoming tournament.<br><br>
+        <% var count = _.keys(Game.data.Players).length; if (count > 1) { %>
+        <button id="startgame" class="gamebutton">Start the Tournament with <%= count %> players!</button>
+        <% } %>
       <% } else if (Game.data.Members && Game.data.Members.length > 0) { %>
         <form id="signup">
-        <label>Display Name: <input type="text" name="dispname" id="DisplayName" placeholder="Display Name" value="<%= Player.authuser.displayName %>"></label><br>
         <button class="gamebutton">Sign up for the next Tournament</button>
         </form>
       <% } else { %>
         Hello - Only Members of this table (if it exists) may see or join tournaments. Please
         enter the room password and join!
         <form id="joingroup">
+        <label>Display Name: <input type="text" name="dispname" id="DisplayName" placeholder="Display Name" value="<%= Player.authuser.displayName %>"></label><br>
         <label>Room Password: <input type="text" name="roompass" id="RoomPass" placeholder="Game Password" value=""></label><br><br>
         <button class="gamebutton">Join Group</button>
         </form>
+      <% } %>
+      <% if (Game.data.Members && _.keys(Game.data.Members).length > 0) { %>
+      <br><br>
+        Members of <%= Game.name %>:<br>
+        <%= _.values(Game.data.Members).join(", ") %>
       <% } %>
     </div>
   </script>

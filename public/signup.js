@@ -16,12 +16,12 @@ VIEWS.Signup = new View({
   },
   OnSubmit: {
     "signup": function(evt) {
-      var dispname = $('#DisplayName').val();
-      RollPoker.SendCommand("Register", {DisplayName: dispname});
+      RollPoker.SendCommand("Register", {});
     },
     "joingroup": function(evt) {
       var roompass = $('#RoomPass').val();
-      RollPoker.SendCommand("JoinGroup", {RoomPass: roompass}, function() {
+      var dispname = $('#DisplayName').val();
+      RollPoker.SendCommand("JoinGroup", {DisplayName: dispname, RoomPass: roompass}, function() {
         window.location.reload(false);
       });
     },

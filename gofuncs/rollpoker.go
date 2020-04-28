@@ -61,7 +61,7 @@ type GameRoom struct {
 	CurrentBlinds	[]int
 	BlindTime	int64
 	PausedAt	int64		// Nonzero if paused
-	Members		[]string	// People who can view and sign up.
+	Members		map[string]string	// People who can view and sign up, and their display names.
 	RoomPass	string		// Password to register as member.
 }
 
@@ -77,6 +77,18 @@ type LogItems struct {
 	Logs		*[]*LogItem
 }
 
+type DataItem struct {
+	// This is a catch-all for all game/gamename/data/<doc> documents.
+	Cards []string
+}
+
+type DataRef struct {
+	Data	*DataItem
+	Doc	*firestore.DocumentSnapshot
+	DocRef	*firestore.DocumentRef
+	Changed	bool // If this should be updated on SaveGame or not.
+}
+
 type RoomData struct {
 	// This structure doesn't exist in the DB. Instead, it's used
 	// to pass around information on the server side. We fetch and
@@ -85,6 +97,7 @@ type RoomData struct {
 	Room	GameRoom
 	TX	*firestore.Transaction
 	Logs	[]*LogItem
+	Drefs	map[string]*DataRef
 }
 
 const (
@@ -196,47 +209,6 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-func FetchData(game *RoomData, name string, ptr interface{}) bool {
-	docRef := FIRESTORE_CLIENT.Doc("games/" + game.Name + "/data/" + name)
-	doc, err := game.TX.Get(docRef)
-	if err != nil {
-		log.Printf("Can't get snapshot: %v\n", err)
-		return false
-	}
-	err = doc.DataTo(ptr)
-	if err != nil {
-		log.Printf("No doc.datato avail: %v\n", err)
-		return false
-	}
-	return true
-}
-
-func SaveData(game *RoomData, name string, ptr interface{}) {
-	docRef := FIRESTORE_CLIENT.Doc("games/" + game.Name + "/data/" + name)
-	err := game.TX.Set(docRef, ptr)
-	if err != nil {
-		log.Printf("Unable to save game data: %v", err)
-	}
-}
-
-func FetchGame(name string, tx *firestore.Transaction) *RoomData {
-	var game RoomData
-	pubRef := FIRESTORE_CLIENT.Doc("games/" + name)
-	pub, err := tx.Get(pubRef)
-	if err != nil {
-		log.Printf("Can't get snapshot: %v\n", err)
-		return nil
-	}
-	err = pub.DataTo(&game.Room)
-	if err != nil {
-		log.Printf("No pub.datato avail: %v\n", err)
-		return nil
-	}
-	game.Name = name
-	game.TX = tx
-	return &game
-}
-
 func LogEvent(game *RoomData, name string, fargs ...interface{}) {
 	litem := new(LogItem)
 	litem.Message = ""
@@ -251,6 +223,53 @@ func LogMessage(game *RoomData, msg string, fargs ...interface{}) {
 	litem.Message = fmt.Sprintf(msg, fargs...)
 	fmt.Println(litem.Message)
 	game.Logs = append(game.Logs, litem)
+}
+
+func FetchData(rdata *RoomData, name string) *DataItem {
+	dref, has := rdata.Drefs[name]
+	if !has {
+		dref = new(DataRef)
+		dref.Changed = false
+		dref.DocRef = FIRESTORE_CLIENT.Doc("games/" + rdata.Name + "/data/" + name)
+		doc, err := rdata.TX.Get(dref.DocRef)
+		dref.Doc = doc
+		dref.Data = new(DataItem)
+		if err == nil && dref.Doc.Exists() {
+			err = dref.Doc.DataTo(dref.Data)
+		}
+		dref.Changed = false
+	}
+	return dref.Data
+}
+
+func SaveData(rdata *RoomData, name string, data *DataItem) {
+	dref, has := rdata.Drefs[name]
+	if !has {
+		dref = new(DataRef)
+		rdata.Drefs[name] = dref
+		dref.DocRef = FIRESTORE_CLIENT.Doc("games/" + rdata.Name + "/data/" + name)
+	}
+	dref.Data = data
+	dref.Changed = true
+}
+
+func FetchGame(name string, tx *firestore.Transaction) *RoomData {
+	var rdata RoomData
+	pubRef := FIRESTORE_CLIENT.Doc("games/" + name)
+	pub, err := tx.Get(pubRef)
+	if err != nil {
+		log.Printf("Can't get snapshot: %v\n", err)
+		return nil
+	}
+	err = pub.DataTo(&rdata.Room)
+	if err != nil {
+		log.Printf("No pub.datato avail: %v\n", err)
+		return nil
+	}
+	rdata.Name = name
+	rdata.Drefs = make(map[string]*DataRef)
+	rdata.TX = tx
+	return &rdata
 }
 
 func SaveGame(game *RoomData, tx *firestore.Transaction) {
@@ -274,20 +293,25 @@ func SaveGame(game *RoomData, tx *firestore.Transaction) {
 			return
 		}
 	}
+	for _, dref := range game.Drefs {
+		if dref.Changed {
+			game.TX.Set(dref.DocRef, dref.Data)
+		}
+	}
 	fmt.Println("Saved", game.Name)
 }
 
-func CheckGameSanity(game *RoomData, hasCommandWaiting bool) string {
-	if game.Room.RoomState != POKER {
+func CheckGameSanity(rdata *RoomData, hasCommandWaiting bool) string {
+	if rdata.Room.RoomState != POKER {
 		return ""
 	}
 	totalChips := 0
-	for _, table := range game.Room.Tables {
+	for _, table := range rdata.Room.Tables {
 		turncount := 0
 		betcount := 0
 		totalChips += table.Pot
 		for _, pid := range table.Seats {
-			player := game.Room.Players[pid]
+			player := rdata.Room.Players[pid]
 			if player.State == TURN {
 				turncount += 1
 			}
@@ -307,7 +331,7 @@ func CheckGameSanity(game *RoomData, hasCommandWaiting bool) string {
 			return "No TURN or Command going??"
 		}
 	}
-	expectedChips := len(game.Room.Players) * game.Room.GameSettings.StartingChips
+	expectedChips := len(rdata.Room.Players) * rdata.Room.GameSettings.StartingChips
 
 	if totalChips != expectedChips {
 		return "Chip count mismatch!"
@@ -366,20 +390,21 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 	txerr := FIRESTORE_CLIENT.RunTransaction(context.Background(),
 					func(ctx context.Context, tx *firestore.Transaction) error {
 
-		game := FetchGame(gc.Name, tx)
-		if game == nil {
+		rdata := FetchGame(gc.Name, tx)
+		if rdata == nil {
 			http.Error(w, "Unknown Game", http.StatusBadRequest)
 			return nil
 		}
+		player = rdata.Room.Players[gc.PlayerId]
 
 		fmt.Println("Got", gc.Command)
 
 		// Call Command by name if it has one
-		method := reflect.ValueOf(player).MethodByName("Try" + game.Room.RoomState + gc.Command)
+		method := reflect.ValueOf(player).MethodByName("Try" + rdata.Room.RoomState + gc.Command)
 		var cresp *CommandResponse
 
 		if method.IsValid() {
-			rval := method.Call([]reflect.Value{reflect.ValueOf(game), reflect.ValueOf(&gc)})
+			rval := method.Call([]reflect.Value{reflect.ValueOf(rdata), reflect.ValueOf(&gc)})
 			cresp = rval[0].Interface().(*CommandResponse)
 		} else {
 			cresp = CError("Invalid command")
@@ -389,7 +414,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, cresp.Errmsg, http.StatusBadRequest)
 			return nil
 		}
-		sanity := CheckGameSanity(game, cresp.Run || cresp.Willrun)
+		sanity := CheckGameSanity(rdata, cresp.Run || cresp.Willrun)
 		if sanity != "" {
 			http.Error(w, "Game failed sanity check", http.StatusBadRequest)
 			panic(sanity)
@@ -397,14 +422,14 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		var ret time.Duration
 		var tbl string
 		if cresp.Run {
-			tbl = game.TableForPlayer(player)
-			ret = RunCommandLoop(game, tbl)
+			tbl = rdata.TableForPlayer(player)
+			ret = RunCommandLoop(rdata, tbl)
 		}
 		if cresp.Save {
-			SaveGame(game, tx)
+			SaveGame(rdata, tx)
 		}
 		if cresp.Run && ret >= 0 {
-			go RunCommands(game.Name, tbl, ret)
+			go RunCommands(rdata.Name, tbl, ret)
 		}
 		fmt.Fprintf(w, "success\n")
 		return nil

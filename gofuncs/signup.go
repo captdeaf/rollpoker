@@ -8,22 +8,21 @@ func (player *Player) TrySignupJoinGroup(rdata *RoomData, gc *GameCommand) *Comm
 	if rdata.Room.RoomPass != roompass {
 		return CError("Invalid password")
 	}
-
-	rdata.Room.Members = append(rdata.Room.Members, gc.PlayerId)
-	return CSave()
-}
-
-func (player *Player) TrySignupRegister(rdata *RoomData, gc *GameCommand) *CommandResponse {
 	dname := gc.Args["DisplayName"]
 	if dname == "" {
 		// TODO: Better validation. Not only whitespace, etc.
 		return CError("DisplayName must be set")
 	}
 
+	rdata.Room.Members[gc.PlayerId] = dname
+	return CSave()
+}
+
+func (player *Player) TrySignupRegister(rdata *RoomData, gc *GameCommand) *CommandResponse {
 	newPlayer := new(Player)
 
 	newPlayer.PlayerId = gc.PlayerId
-	newPlayer.DisplayName = dname
+	newPlayer.DisplayName = rdata.Room.Members[gc.PlayerId]
 	newPlayer.DisplayState = "Joined"
 
 	rdata.Room.Players[gc.PlayerId] = newPlayer

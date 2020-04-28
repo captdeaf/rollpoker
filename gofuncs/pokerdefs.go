@@ -18,10 +18,6 @@ type GameCmd struct {
 	Sleepfor time.Duration	// How long to sleep after this event
 }
 
-type TableData struct {
-	Deck []string
-}
-
 type GameDef []GameCmd
 
 func (game *RoomData) Shuffle(tablename string, _ int) bool {
@@ -39,63 +35,58 @@ func (game *RoomData) Shuffle(tablename string, _ int) bool {
 	rand.Shuffle(len(deckcopy), func(i, j int) {
 		deckcopy[i], deckcopy[j] = deckcopy[j], deckcopy[i]
 	})
-	var tdata *TableData
-	FetchData(game, tablename, &tdata)
-	tdata.Deck = deckcopy
-	SaveData(game, tablename, &tdata)
+	tdata := FetchData(game, tablename)
+	tdata.Cards = deckcopy
+	SaveData(game, tablename, tdata)
 	return true // We're done shuffling.
 }
 
 func (game *RoomData) Burn(tablename string, _ int) bool {
-	var tdata *TableData
-	FetchData(game, tablename, &tdata)
-	tdata.Deck = tdata.Deck[1:]
-	SaveData(game, tablename, &tdata)
+	tdata := FetchData(game, tablename)
+	tdata.Cards = tdata.Cards[1:]
+	SaveData(game, tablename, tdata)
 	return true
 }
 
 func (game *RoomData) TexFlop(tablename string, _ int) bool {
 	table := game.Room.Tables[tablename]
-	var tdata *TableData
-	FetchData(game, tablename, &tdata)
+	tdata := FetchData(game, tablename)
 
-	flop := tdata.Deck[:3]
+	flop := tdata.Cards[:3]
 	table.Cards["board"] = flop
-	tdata.Deck = tdata.Deck[3:]
+	tdata.Cards = tdata.Cards[3:]
 	LogEvent(game, "Board", strings.Join(flop, " "))
 	LogMessage(game, "Flop: <<%s>>", strings.Join(flop, ">>,<<"))
 
-	SaveData(game, tablename, &tdata)
+	SaveData(game, tablename, tdata)
 	return true
 }
 
 func (game *RoomData) TexTurn(tablename string, _ int) bool {
 	table := game.Room.Tables[tablename]
-	var tdata *TableData
-	FetchData(game, tablename, &tdata)
+	tdata := FetchData(game, tablename)
 
-	table.Cards["board"] = append(table.Cards["board"], tdata.Deck[0])
-	LogEvent(game, "Board", tdata.Deck[0])
-	LogMessage(game, "Turn: <<%s>>", tdata.Deck[0])
+	table.Cards["board"] = append(table.Cards["board"], tdata.Cards[0])
+	LogEvent(game, "Board", tdata.Cards[0])
+	LogMessage(game, "Turn: <<%s>>", tdata.Cards[0])
 
-	tdata.Deck = tdata.Deck[1:]
+	tdata.Cards = tdata.Cards[1:]
 
-	SaveData(game, tablename, &tdata)
+	SaveData(game, tablename, tdata)
 	return true
 }
 
 func (game *RoomData) TexRiver(tablename string, _ int) bool {
 	table := game.Room.Tables[tablename]
-	var tdata *TableData
-	FetchData(game, tablename, &tdata)
+	tdata := FetchData(game, tablename)
 
-	table.Cards["board"] = append(table.Cards["board"], tdata.Deck[0])
-	LogEvent(game, "Board", tdata.Deck[0])
-	LogMessage(game, "Turn: <<%s>>", tdata.Deck[0])
+	table.Cards["board"] = append(table.Cards["board"], tdata.Cards[0])
+	LogEvent(game, "Board", tdata.Cards[0])
+	LogMessage(game, "Turn: <<%s>>", tdata.Cards[0])
 
-	tdata.Deck = tdata.Deck[1:]
+	tdata.Cards = tdata.Cards[1:]
 
-	SaveData(game, tablename, &tdata)
+	SaveData(game, tablename, tdata)
 	return true
 }
 
@@ -143,23 +134,22 @@ func (game *RoomData) DealAllDown(tablename string, count int) bool {
 	table := game.Room.Tables[tablename]
 	order := GetNextPlayers(game, table, table.Dealer)
 
-	var tdata *TableData
-	FetchData(game, tablename, &tdata)
+	tdata := FetchData(game, tablename)
 
 	var idx = 0
 
 	for i := 0; i < count; i++ {
 		for _, seat := range order {
 			player := game.Room.Players[table.Seats[seat]]
-			player.Hand = append(player.Hand, tdata.Deck[idx])
+			player.Hand = append(player.Hand, tdata.Cards[idx])
 			idx += 1
 		}
 	}
-	tdata.Deck = tdata.Deck[idx:]
+	tdata.Cards = tdata.Cards[idx:]
 	LogEvent(game, "Dealing", count, "DOWN")
 	LogMessage(game, "Dealing %d cards to each player", count)
 
-	SaveData(game, tablename, &tdata)
+	SaveData(game, tablename, tdata)
 
 	return true
 }
