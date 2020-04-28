@@ -234,6 +234,7 @@ func FetchData(rdata *RoomData, name string) *DataItem {
 		doc, err := rdata.TX.Get(dref.DocRef)
 		dref.Doc = doc
 		dref.Data = new(DataItem)
+		dref.Data.Cards = make([]string, 0)
 		if err == nil && dref.Doc.Exists() {
 			err = dref.Doc.DataTo(dref.Data)
 		}
@@ -273,13 +274,7 @@ func FetchGame(name string, tx *firestore.Transaction) *RoomData {
 }
 
 func SaveGame(game *RoomData, tx *firestore.Transaction) {
-	pubref := FIRESTORE_CLIENT.Doc("games/" + game.Name)
-	err := tx.Set(pubref, game.Room)
-	if err != nil {
-		fmt.Printf("Error saving games: %v\n", err)
-		return
-	}
-
+	var err error
 	if len(game.Logs) > 0 {
 		litems := new(LogItems)
 		litems.Timestamp = time.Now().UnixNano()
@@ -298,6 +293,13 @@ func SaveGame(game *RoomData, tx *firestore.Transaction) {
 			game.TX.Set(dref.DocRef, dref.Data)
 		}
 	}
+	pubref := FIRESTORE_CLIENT.Doc("games/" + game.Name)
+	err = tx.Set(pubref, game.Room)
+	if err != nil {
+		fmt.Printf("Error saving games: %v\n", err)
+		return
+	}
+
 	fmt.Println("Saved", game.Name)
 }
 

@@ -140,8 +140,12 @@ func (game *RoomData) DealAllDown(tablename string, count int) bool {
 
 	for i := 0; i < count; i++ {
 		for _, seat := range order {
-			player := game.Room.Players[table.Seats[seat]]
-			player.Hand = append(player.Hand, tdata.Cards[idx])
+			playerid := table.Seats[seat]
+			player := game.Room.Players[playerid]
+			phand := FetchData(game, playerid)
+			player.Hand = append(player.Hand, "bg")
+			phand.Cards = append(phand.Cards, tdata.Cards[idx])
+			SaveData(game, playerid, phand)
 			idx += 1
 		}
 	}
@@ -244,8 +248,7 @@ func PayoutPots(game *RoomData, pots []*Pot, hands []*PlayerHand) {
 				ph := idScore[player.PlayerId]
 				pots[i].Winners = append(pots[i].Winners, player)
 				// We have a winner, show this player's cards.
-				// TODO TODO TODO Get player handvals
-				// player.Hand = strings.Join(GetHandVals(game, player), "")
+				player.Hand = GetPlayerHand(game, player.PlayerId)
 				LogEvent(game, "Win", player.PlayerId, pots[i].Chips, ph.Hand, strings.Join(ph.Cards," "))
 				LogMessage(game, "%s wins the %d-chip pot with %s: <<%s>>",
 						 player.DisplayName, pots[i].Chips,
@@ -275,7 +278,6 @@ func DivvyPot(game *RoomData, pot *Pot) {
 	// Crap. We have ties
 	chipCount := int(pot.Chips / len(pot.Winners))
 
-	// TODO: Do we care about chips?
 	total := 0
 	for _, winner := range pot.Winners {
 		winner.Chips += chipCount
@@ -300,9 +302,7 @@ func (game *RoomData) TexWin(tablename string, _ int) bool {
 		player := game.Room.Players[pid]
 		allhands[idx] = new(PlayerHand)
 		allhands[idx].Player = player
-		// TODO TODO TODO Get player hand
-		// hand := GetHandVals(game, player)
-		hand := []string{}
+		hand := GetPlayerHand(game, pid)
 		if player.State != FOLDED {
 			allhands[idx].Cards, allhands[idx].Hand, allhands[idx].Score = GetTexasRank(hand, table.Cards["board"])
 		} else {
@@ -342,6 +342,11 @@ func (game *RoomData) FoldedWin(tablename string, _ int) bool {
 	return true
 }
 
+func GetPlayerHand(rdata *RoomData, playerid string) []string {
+	phand := FetchData(rdata, playerid)
+	return phand.Cards
+}
+
 func (game *RoomData) ResetHand(tablename string, _ int) bool {
 	table := game.Room.Tables[tablename]
 	table.Pot = 0
@@ -349,6 +354,9 @@ func (game *RoomData) ResetHand(tablename string, _ int) bool {
 		game.Room.Players[playerid].Bet = 0
 		game.Room.Players[playerid].TotalBet = 0
 		game.Room.Players[playerid].Hand = make([]string, 0)
+		emptyHand := new(DataItem)
+		emptyHand.Cards = []string{}
+		SaveData(game, playerid, emptyHand)
 		game.Room.Players[playerid].State = WAITING
 		game.Room.Players[playerid].DisplayState = ""
 		table.Cards = make(map[string][]string)
@@ -553,16 +561,12 @@ func (game *RoomData) BetRound(tablename string, _ int) bool {
 		washidden := false
 		for _, playerid := range allins {
 			player := game.Room.Players[playerid]
-			player.Hand = []string{}
-			// TODO TODO TODO Get player hand
-		}
-		if washidden {
-			for _, playerid := range allins {
-				player := game.Room.Players[playerid]
-				// TODO TODO TODO Get player hand
-				// hand := GetHandVals(game, player)
-				hand := []string{}
-				LogMessage(game, "%s has: <<%s>>", player.DisplayName, strings.Join(hand, ">>,<<"))
+			for _, s := range player.Hand {
+				if s == "bg" { washidden = true; break; }
+			}
+			if washidden {
+				player.Hand = GetPlayerHand(game, playerid)
+				LogMessage(game, "%s has: <<%s>>", player.DisplayName, strings.Join(player.Hand, ">>,<<"))
 			}
 		}
 		return true

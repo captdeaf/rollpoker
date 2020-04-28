@@ -11,6 +11,7 @@ var Player = {
   uid: "",   // UID, set from firebase auth
   state: "", // Player[UID].State from game structure
   info: null,  // All info from player[uid].state
+  pdata: {}, // From game/data/<uid>
 };
 
 var RollPoker = {
@@ -85,6 +86,7 @@ var RollPoker = {
       Game.LAST_STATE = doc.RoomState;
       RollPoker.Handler = VIEWS[doc.RoomState];
       if (RollPoker.Handler) {
+        RollPoker.Handler.init();
         RollPoker.Handler.Start();
       }
     }
@@ -128,6 +130,13 @@ var RollPoker = {
         Players: [],
       });
     });
+    var dataref = db.doc("/games/" + Game.name + "/data/" + Player.uid);
+    Game.watchers.data = dataref.onSnapshot(function(doc) {
+      // In theory, pdata is always updated immediately before a
+      // document update.
+      Player.pdata = doc.data();
+      RollPoker.Update(Game.data);
+    });
 
     var logref = db.collection("/games/" + Game.name + "/log")
     logref.orderBy("Timestamp", "desc").limit(30).get().then(function(logs) {
@@ -139,10 +148,9 @@ var RollPoker = {
     });
   },
   LATEST_SEEN: 0,
-  LogCallback: undefined,
   UpdateLog: function(log) {
-    if (RollPoker.LogCallback) {
-      RollPoker.LogCallback(log.Message);
+    if (this.Handler.OnLog) {
+      RollPoker.Handler.OnLog(log.Message);
     }
   },
   ProcessLogs: function(logs, doevents) {

@@ -37,14 +37,7 @@ var CommandQueue = {
   },
 };
 
-VIEWS.Poker = new View({
-  Templates: {
-    TABLE: "#maintable",
-    VIEW: "#tableview",
-    HANDVIEW: "#myhandview",
-    BETVIEW: "#betplaqueview",
-    MENU: "#menucontents",
-  },
+var Indicator = {
   INDICATING: undefined,
   Indicate: function(message, opts) {
     if (opts && opts.canCancel) {
@@ -67,6 +60,65 @@ VIEWS.Poker = new View({
     var qd = Table.QueuedCommand;
     Table.QueuedCommand = undefined;
     Poker.SendCommand(qd.cmd, qd.args);
+  },
+};
+
+var Render = {
+  CHIP_VALUES: [
+    [1, "za"],
+    [25, "zb"],
+    [100, "zc"],
+    [500, "zd"],
+    [1000, "ze"],
+    [5000, "zf"],
+  ],
+  ChipStack: function(amt, cls) {
+    // TODO TODO: Show biggest chips possible on down to smallest.
+    if (!cls) { cls = "smallpiles"; }
+    var piles = $('<div class="' + cls + '">');
+    for (var i = 0; amt > 0 && i < Render.CHIP_VALUES.length; i++) {
+      var pile = $('<ul class="pile">');
+      var max = Render.CHIP_VALUES[i][0] * 20;
+      var half = Render.CHIP_VALUES[i][0] * 10;
+      var numval = amt % max;
+      if (numval === 0) {
+        numval = max;
+      } else if (numval < half && amt > max) {
+        numval += half;
+      }
+      amt = amt - numval;
+      for (var j = 0; j < numval; j = j + Render.CHIP_VALUES[i][0]) {
+        var li = $('<li>');
+        li.append($('<div class="chip ' + Render.CHIP_VALUES[i][1] + '">'));
+        pile.append(li);
+      }
+
+      piles.prepend($('<div class="pilecontainer">').append(pile));
+    }
+    return piles.wrapAll('<div>').parent().html();
+  },
+  GetUnicodeCard: function(card) {
+    var pref = {
+      s: "&#x1f0a",
+      h: "&#x1f0b",
+      d: "&#x1f0c",
+      c: "&#x1f0d",
+    }[card.substring(0,1)];
+    var suff = {
+      "a": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7",
+      "8": "8", "9": "9", "t": "a", "j": "b", "q": "d", "k": "e",
+    }[card.substring(1,2)];
+    return pref + suff;
+  },
+};
+
+VIEWS.Poker = new View({
+  Templates: {
+    Table: "#maintable",
+    View: "#tableview",
+    Hand: "#myhandview",
+    Bet: "#betplaqueview",
+    Menu: "#menucontents",
   },
   OnClick: {
     "betadd": function() {
@@ -93,27 +145,20 @@ VIEWS.Poker = new View({
       this.ClearIndicator();
     },
   },
-  Start: function(doc) {
-    $('body').html(this.VIEW());
-    if (Poker.PLAYER) {
-    }
-    Poker.LogCallback = Table.LogUpdate;
+  Start: function() {
+    $('body').html(this.T.View());
   },
   CHIP_VALS: "",
   CUR_BET: -1,
   Update: function(data) {
-    if (data.GameSettings.ChipValues != Table.CHIP_VALS) {
-      Table.UpdateChips(data.GameSettings.ChipValues);
-      Table.CHIP_VALS = data.GameSettings.ChipValues;
-    }
     // TODO: Pick my table out from multiple tables.
     var tableData = data.Tables["table0"];
-    var table = $(Table.TABLE({game: data, table:tableData, players: data.Players}));
+    var table = $(this.T.Table({game: data, table:tableData, players: data.Players}));
     $('#mytable').empty();
     $('#mytable').append(table);
-    Table.ShowPlayerState(tableData,Poker.PLAYER);
-    if (Poker.PLAYER) {
-      if (Poker.PLAYER.Hand && Poker.PLAYER.Hand.length > 0) {
+    this.ShowPlayerState(tableData,Player.info);
+    if (_.any(Player.info)) {
+      if (_.any(Player.info.Hand)) {
         console.log("State: " + Poker.PLAYER.State);
         if (!Table.IsSameHand(Poker.PLAYER.Hand, Table.LASTHAND)) {
           Table.CUR_BET = -1;
@@ -242,145 +287,10 @@ VIEWS.Poker = new View({
     jqe.mousedown(handle_mousedown);
     jqe.on("touchstart", handle_mousedown);
   },
-  GetHand: function(str) {
-    var ret = [];
-    if (str.startsWith("!")) {
-      str = atob(str.substring(1,str.length))
-      // Figure out how many cards. There's 38 chars in encryption
-      // !, a-z0-9, an extra m, then the cards (2 chars each)
-      for (var i = 38; i < str.length; i += 2) {
-        ret.push("bg");
-      }
-    } else {
-      return str.match(/(\w\w)/g);
-    }
-    return ret
-  },
-  DecryptMyHand: function(str) {
-    var ret = [];
-    if (str.startsWith("!")) {
-      var ns = "";
-      var bstr = atob(str.substring(1,str.length));
-      // Decrypt: De-XOR it, then pluck the string out from m.*m
-      for (var i = 0; i < bstr.length; i++) {
-        ns = ns + String.fromCharCode(bstr.charCodeAt(i) ^ Poker.PLAYER_KEY.charCodeAt(i % Poker.PLAYER_KEY.length));
-      }
-      var m = ns.match(/m(\w+)m/);
-      return m[1].match(/\w\w/g);
-    }
-
-    for (var i = 0; i < str.length; i += 2) {
-      ret.push(str.substring(i,i+2));
-    }
-    return ret;
-  },
   Setup: function() {
-    for (var key in Table.Templates) {
-      Table[key] = _.template($(Table.Templates[key]).html());
-    }
-
-    function makeCard(x,y,cardname) {
-      var style = document.createElement('style');
-      style.type = 'text/css';
-      var cardx = x * 61.5;
-      var cardy = y * 81;
-      style.innerHTML = "." + cardname +
-        "{ background-position: -" + cardx + "px -" + cardy + "px; }";
-      document.getElementsByTagName('head')[0].appendChild(style);
-    }
-
-    var cards = ["a", "2", "3", "4", "5", "6", "7", "8", "9", "t", "j", "q", "k"];
-    var suits = ["s", "c", "d", "h"];
-    for (var c = 0; c < cards.length; c++) {
-      for (var s = 0; s < suits.length; s++) {
-        makeCard(c, s, suits[s] + cards[c]);
-      }
-    }
-
-    function makeChip(x,y,chipname) {
-      var style = document.createElement('style');
-      style.type = 'text/css';
-      var chipx = x * 129;
-      var chipy = y * 59;
-      style.innerHTML = "." + chipname +
-        "{ background-position: -" + chipx + "px -" + chipy + "px; }";
-      document.getElementsByTagName('head')[0].appendChild(style);
-    }
-
-    makeChip(0, 0, "za");
-    makeChip(1, 0, "zb");
-    makeChip(2, 0, "zc");
-    makeChip(3, 0, "zd");
-    makeChip(4, 0, "ze");
-    makeChip(5, 0, "zf");
   },
 
-
-  CHIP_VALUES: [],
-
-  UpdateChips: function(str) {
-    Table.CHIP_VALUES = [];
-    // Accepts "25 100 500 ..." etc.
-    var colors = ["za", "zb", "zc", "zd", "ze", "zf"];
-    var values = str.split(" ");
-    for (var i = 0; i < values.length; i++) {
-      var num = parseInt(values[i], 10);
-      if (num != NaN && num > 0) {
-        Table.CHIP_VALUES.push([num, colors[i]]);
-      }
-    }
-    Table.CHIP_VALUES.sort(function(a,b) { return a[0] - b[0]; });
-  },
-
-  ChipStack: function(amt, cls) {
-    if (!cls) { cls = "smallpiles"; }
-    var piles = $('<div class="' + cls + '">');
-    for (var i = 0; amt > 0 && i < Table.CHIP_VALUES.length; i++) {
-      var pile = $('<ul class="pile">');
-      var max = Table.CHIP_VALUES[i][0] * 20;
-      var half = Table.CHIP_VALUES[i][0] * 10;
-      var numval = amt % max;
-      if (numval === 0) {
-        numval = max;
-      } else if (numval < half && amt > max) {
-        numval += half;
-      }
-      amt = amt - numval;
-      for (var j = 0; j < numval; j = j + Table.CHIP_VALUES[i][0]) {
-        var li = $('<li>');
-        li.append($('<div class="chip ' + Table.CHIP_VALUES[i][1] + '">'));
-        pile.append(li);
-      }
-
-      piles.prepend($('<div class="pilecontainer">').append(pile));
-    }
-    return piles.wrapAll('<div>').parent().html();
-  },
-  GetUnicodeCard: function(card) {
-    var pref = {
-      s: "&#x1f0a",
-      h: "&#x1f0b",
-      d: "&#x1f0c",
-      c: "&#x1f0d",
-    }[card.substring(0,1)];
-    var suff = {
-      "a": "1",
-      "2": "2",
-      "3": "3",
-      "4": "4",
-      "5": "5",
-      "6": "6",
-      "7": "7",
-      "8": "8",
-      "9": "9",
-      "t": "a",
-      "j": "b",
-      "q": "d",
-      "k": "e",
-    }[card.substring(1,2)];
-    return pref + suff;
-  },
-  LogUpdate: function(message) {
+  OnLog: function(message) {
     var upd = message.replace(/<<(\w+)>>/g, function(a, b) {
       return Table.GetUnicodeCard(b);
     });

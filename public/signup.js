@@ -3,7 +3,6 @@ VIEWS.Signup = new View({
     View: "#joinview",
   },
   Start: function() {
-    this.init();
     $('body').html(this.T.View({data: {Players: []}}));
   },
   Update: function(state) {

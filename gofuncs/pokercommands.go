@@ -20,8 +20,9 @@ func (player *Player) TrySignupStartPoker(rdata *RoomData, gc *GameCommand) *Com
 	// So, we're trying to start a rdata.
 	// 1) Do we have enough players? Do we need multiple tables?
 	allPlayers := []string{}
-	settings := rdata.Room.OrigSettings
-	rdata.Room.GameSettings = settings
+	var settings GameSettings
+	settings = *rdata.Room.OrigSettings
+	rdata.Room.GameSettings = &settings
 
 	for _, pl := range rdata.Room.Players {
 		allPlayers = append(allPlayers, pl.PlayerId)
@@ -59,7 +60,7 @@ func (player *Player) TrySignupStartPoker(rdata *RoomData, gc *GameCommand) *Com
 	copy(table.Dolist, GAME_COMMANDS["texasholdem"])
 
 	blindstr := rdata.Room.GameSettings.BlindStructure[0]
-	if len(rdata.Room.GameSettings.BlindStructure) > 0 {
+	if len(rdata.Room.GameSettings.BlindStructure) > 1 {
 		rdata.Room.GameSettings.BlindStructure = rdata.Room.GameSettings.BlindStructure[1:]
 	}
 
@@ -81,7 +82,7 @@ func (player *Player) TrySignupStartPoker(rdata *RoomData, gc *GameCommand) *Com
 		i += 1
 	}
 	fmt.Println("DName:", player.DisplayName)
-	LogMessage(rdata, "%s starts the rdata", player.DisplayName)
+	LogMessage(rdata, "%s starts the game", player.DisplayName)
 	// We handle RunCommands, so we return special CommandResponse instead of COK
 	return CResponse("", false, true, true)
 }
