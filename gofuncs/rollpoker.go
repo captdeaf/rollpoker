@@ -5,6 +5,7 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"runtime/debug"
 	"math/rand"
 	"context"
 	"log"
@@ -152,7 +153,7 @@ func init() {
 		log.Printf("Can't get client: %v\n", err)
 		return
 	}
-	fmt.Println("Rollpoker started")
+	log.Println("Rollpoker started")
 }
 
 type GameResponse struct {
@@ -168,7 +169,7 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("args: %v\n", args)
+	log.Printf("args: %v\n", args)
 
 	var newgame RoomData
 	var settings GameSettings
@@ -216,14 +217,14 @@ func LogEvent(game *RoomData, name string, fargs ...interface{}) {
 	litem.Message = ""
 	litem.EventName = name
 	litem.Args = fargs
-	fmt.Println(litem.Message)
+	log.Println(litem.Message)
 	game.Logs = append(game.Logs, litem)
 }
 
 func LogMessage(game *RoomData, msg string, fargs ...interface{}) {
 	litem := new(LogItem)
 	litem.Message = fmt.Sprintf(msg, fargs...)
-	fmt.Println(litem.Message)
+	log.Println(litem.Message)
 	game.Logs = append(game.Logs, litem)
 }
 
@@ -286,7 +287,7 @@ func SaveGame(game *RoomData, tx *firestore.Transaction) {
 		docref := FIRESTORE_CLIENT.Doc(lname)
 		err = game.TX.Set(docref, litems)
 		if err != nil {
-			fmt.Printf("Error saving Log Items: %v\n", err)
+			log.Printf("Error saving Log Items: %v\n", err)
 			return
 		}
 	}
@@ -298,11 +299,11 @@ func SaveGame(game *RoomData, tx *firestore.Transaction) {
 	pubref := FIRESTORE_CLIENT.Doc("games/" + game.Name)
 	err = tx.Set(pubref, game.Room)
 	if err != nil {
-		fmt.Printf("Error saving games: %v\n", err)
+		log.Printf("Error saving games: %v\n", err)
 		return
 	}
 
-	fmt.Println("Saved", game.Name)
+	log.Println("Saved", game.Name)
 }
 
 func CheckGameSanity(rdata *RoomData, hasCommandWaiting bool) string {
@@ -374,10 +375,16 @@ func CResponse(errmsg string, run, save, willrun bool) *CommandResponse {
 
 func Poker(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain")
+	defer func() {
+		if r := recover(); r != nil {
+			http.Error(w, fmt.Sprintf("ERROR %v\n%v", r, string(debug.Stack())), http.StatusBadRequest)
+		}
+	}()
 
 	// Only authorized players can run GameCommand commands.
 	var uid = GetUserIDFromHeader(r)
 	if uid == "" {
+		http.Error(w, "Invalid UID", http.StatusBadRequest)
 		return
 	}
 
@@ -386,6 +393,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&gc)
 
 	if err != nil {
+		http.Error(w, "Invalid Body", http.StatusBadRequest)
 		return
 	}
 	gc.PlayerId = uid
@@ -407,7 +415,7 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 		}
 		player = rdata.Room.Players[gc.PlayerId]
 
-		fmt.Println("Got", gc.Command)
+		log.Println("Got", gc.Command)
 
 		// Call Command by name if it has one
 		method := reflect.ValueOf(player).MethodByName("Try" + rdata.Room.RoomState + gc.Command)
@@ -446,6 +454,6 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if txerr != nil {
-		fmt.Printf("Error: %v\n", txerr)
+		log.Printf("Error: %v\n", txerr)
 	}
 }

@@ -32,7 +32,7 @@ func GetUserIDFromHeader(req *http.Request) string {
 			if err != nil { return "" }
 			FBAUTH_CLIENT, err = fbapp.Auth(ctx)
 		} else {
-			fbapp, err := firebase.NewApp(ctx, nil, nil)
+			fbapp, err := firebase.NewApp(ctx, nil)
 			if err != nil { return "" }
 			FBAUTH_CLIENT, err = fbapp.Auth(ctx)
 		}
