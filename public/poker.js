@@ -20,10 +20,10 @@ var CommandQueue = {
     // Called on Bets. If we have a queued command that isn't Fold,
     // then cancel it.
     if (this.QueuedCommand && this.QueuedCommand.cmd != "Fold") {
-      this.QueueCancel();
+      this.Clear();
     }
   },
-  QueueCancel: function() {
+  Clear: function() {
     this.QueuedCommand = undefined;
   },
   PopCommand: function() {
@@ -116,7 +116,7 @@ VIEWS.Poker = new View({
       Notification.requestPermission();
     },
     "cancelindicate": function() {
-      CommandQueue.QueueCancel();
+      CommandQueue.Clear();
       this.ClearIndicator();
     },
     "cmdfold": function() {

@@ -1,5 +1,3 @@
-USING FIREBASE USERS.
-
 Suggestions:
 * Flash on your turn
 
@@ -9,20 +7,23 @@ BUGS:
 * On raise, MinBet is set improperly if Player.Bet = 25 and CurBet = 50.
 
 TODO:
+* Tournament features
+* Blind schedules
+* Pause blinds
+* Ranking list
+* Menu: Quit game, return to registry, Kick Player, kickstart game
+* Admin: Add Owner on creation, and sub-admins.
+* Cash game support
+  * Buyin button
+  * Cashout button
+
+SUGGESTIONS:
+* Muck cards or show 'em on loss?
 * Graying overlay of cards for "Checked" "Called", etc, if you've already
   gone.
 * Show backs of cards, grayed out, for "folded" ?
 * Auto-checkfold for idle players
 * Disable and discolor Bet Plaque when not able to do anything
-* Muck cards or show 'em on loss?
-* Tournament features
-* Blind schedules
-* Pause blinds
-* Ranking list
-* Admin panel: Quit game, return to registry, Kick Player, kickstart game
-* Cash game support
-  * Buyin button
-  * Cashout button
 * index.html should store results in cookies and show them to reduce # of
   "What was the game I created?" - or find rooms by query.
 
@@ -65,3 +66,5 @@ FIXED:
 * Show all-in cards instead of hiding until winner is declared.
 * Add All-in cards to log when auto-play is enabled.
 * Add bet amounts to green status div and player state. Use DisplayState?
+* USE FIREBASE USERS.
+
