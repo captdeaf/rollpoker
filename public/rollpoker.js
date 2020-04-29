@@ -169,11 +169,8 @@ var RollPoker = {
             if (litem.Message && litem.Message != "") {
               RollPoker.UpdateLog(litem);
             } else if (doevents) {
-              var evt = Events[litem.EventName];
-              if (evt) {
-                evt.apply(evt, litem.Args);
-              } else {
-                console.log("No Events[" + litem.EventName + "]!");
+              if (RollPoker.Handler._gameEvent) {
+                RollPoker.Handler._gameEvent(litem.EventName, litem.Args);
               }
             }
           }

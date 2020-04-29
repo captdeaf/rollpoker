@@ -15,10 +15,10 @@
     <script type="text/javascript" src="/jquery-3.4.1.min.js"></script>
     <script type="text/javascript" src="/rollpoker.js"></script>
     <script type="text/javascript" src="/views.js"></script>
+    <script type="text/javascript" src="/helpers.js"></script>
     <script type="text/javascript" src="/register.js"></script>
     <script type="text/javascript" src="/signup.js"></script>
     <script type="text/javascript" src="/poker.js"></script>
-    <script type="text/javascript" src="/events.js"></script>
   </head>
   <script type="text/template" id="adminlogin">
     <input type="text" name="adminpw" placeholder="Admin Password">
@@ -41,7 +41,7 @@
         <div class="tinfo">Pot: <tt><%= table.Pot %></tt></div>
       </div>
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
-      <div id="<%= player.uid %>" class="playerinfo <%= seat %> <%= player.State %>">
+      <div id="<%= player.PlayerId %>" class="playerinfo <%= seat %> <%= player.State %>">
         <div class="playerhand hand">
           <% if (player.PlayerId == Player.uid) { %>
             <% _.each(Player.pdata.Cards, function(cardval) { %>
@@ -98,9 +98,13 @@
     <div id="logscreen"></div>
     <% if (Player.uid && Player.state != "BUSTED") { %>
       <div id="lower">
-        <div id="myhand" class="grow myhand"></div>
-        <div id="indicator" class="indicator"></div><br>
-        <div id="betplaque" class="betplaque"></div>
+        <div id="gamecommands">
+          <button id="cmdfold">Fold</button>
+          <button id="cmdcheck">Check</button>
+          <button id="cmdcall">Call</button>
+          <button id="cmdbet">Bet/Raise</button>
+        </div>
+        <div id="myhand" class="myhand"></div>
         <div id="indicatorbar" style="display:none;"><tt id="indication"></tt><button id="cancelindicate">(Oops, Cancel)</button></div>
       </div>
     <% } %>

@@ -158,7 +158,9 @@ func GetHandValS(cards []*Card) (string, string) {
 
 		if hasStraight {
 			hexval = "54321"
-			cards = append(cards[1:5], cards[0])
+			// Move the Ace to the end for Cards.Orig (CardsToStr)
+			cards[0].Orig, cards[1].Orig, cards[2].Orig, cards[3].Orig, cards[4].Orig =
+			cards[1].Orig, cards[2].Orig, cards[3].Orig, cards[4].Orig, cards[0].Orig
 		}
 	}
 

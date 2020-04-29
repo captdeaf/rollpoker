@@ -271,6 +271,10 @@
     color: white;
   }
 
+  p tt {
+    font-size: 12pt;
+  }
+
   div.smallpiles {
     width: 1200px;
     height: 120px;
@@ -375,10 +379,16 @@
     z-index: 40;
   }
 
-  button.gamecommand {
+  div#gamecommands {
+    position: relative;
     display: block;
-    background-color: gray;
     padding: 1em;
+  }
+
+  div#gamecommands button {
+    width: 100px;
+    padding: 1em;
+    margin-right: 2em;
   }
 
   div#menu {
