@@ -391,9 +391,15 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 	gc.PlayerId = uid
 
 
+	count := 0
 	txerr := FIRESTORE_CLIENT.RunTransaction(context.Background(),
 					func(ctx context.Context, tx *firestore.Transaction) error {
 
+		if count > 0 {
+			http.Error(w, "retry", http.StatusBadRequest)
+			return nil
+		}
+		count++
 		rdata := FetchGame(gc.Name, tx)
 		if rdata == nil {
 			http.Error(w, "Unknown Game", http.StatusBadRequest)

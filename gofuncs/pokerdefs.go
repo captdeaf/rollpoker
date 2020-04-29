@@ -680,8 +680,14 @@ func RunCommandsTransaction(gamename string, tablename string) time.Duration {
 	//   6) Returns a duration to sleep for.
 	var ret time.Duration
 	ret = -1
+	count := 0
 	err := FIRESTORE_CLIENT.RunTransaction(context.Background(),
 					func(ctx context.Context, tx *firestore.Transaction) error {
+
+		if count > 0 {
+			return nil
+		}
+		count = count + 1
 
 		game := FetchGame(gamename, tx)
 		if (game == nil) {
