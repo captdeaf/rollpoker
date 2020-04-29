@@ -27,6 +27,7 @@ type GameSettings struct {
 	StartingChips	int	// 1500
 	BlindStructure	[]string	// 25 50,25 75,50 100,75 150,...
 	BlindTimes	[]int	// 40 40 40 20, for first 3 to be 40 minutes, then 20 mins after that.
+	RoomPass	string		// Password to register as member.
 }
 
 type Player struct {
@@ -48,6 +49,7 @@ type TableState struct {
 	Dolist		GameDef		// GAME_COMMANDS["texasholdem"], etc
 	Cards		map[string][]string // "flop": ["ha", "hk", "hq"], "turn": ...
 	Doing		string		// Command name, in case we can reflect it client-side
+	Blinds		[]int		// Blinds.
 	MinBet		int		// Big blind, or high bet so far.
 	CurBet		int		// Sum of all bets and raises so far
 }
@@ -62,7 +64,6 @@ type GameRoom struct {
 	BlindTime	int64
 	PausedAt	int64		// Nonzero if paused
 	Members		map[string]string	// People who can view and sign up, and their display names.
-	RoomPass	string		// Password to register as member.
 }
 
 type LogItem struct {
@@ -178,6 +179,7 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 	settings.StartingChips = int(i64)
 	allblinds := strings.Split(args["BlindStructure"], ",")
 	settings.BlindStructure	= make([]string, len(allblinds))	// 25 50,25 75,50 100,75 150,...
+	settings.RoomPass = args["RoomPass"]
 
 	for i, val := range allblinds {
 		settings.BlindStructure[i] = val

@@ -452,6 +452,7 @@ func (game *RoomData) HoldemBlinds(tablename string, _ int) bool {
 	order := GetNextPlayers(game, table, table.Dealer)
 	if len(order) < 2 { return false }
 	names := []string{"(small blind)", "(big blind)", "(blind)"}
+	table.Blinds = game.Room.CurrentBlinds
 	for idx, seat := range order {
 		playerid := table.Seats[seat]
 		if idx < len(game.Room.CurrentBlinds) {

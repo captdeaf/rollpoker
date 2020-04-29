@@ -121,14 +121,18 @@
     position: relative;
     left: 300px;
     top: 0px;
+    width: 190px;
     display: inline-block;
     padding: 5px;
     background-color: #ffddddaa;
     border: 1px solid red;
     z-index: 30;
   }
-  input.betp {
-    width: 5em;
+
+  input#betval {
+    font-size: 14pt;
+    margin-bottom: 5px;
+    width: 180px;
     text-align: right;
   }
 
@@ -347,16 +351,19 @@
     width: 600px;
   }
 
-  div.betplaque input {
-    font-size: 14pt;
-    margin-bottom: 5px;
-    width: 160px;
-  }
-
   div.betplaque button {
+    position: relative;
     height: 50px;
     width: 80px;
     z-index: 10;
+  }
+  button.addbb {
+    position: relative
+    right: 0px;
+  }
+  button.addpot {
+    position: relative
+    right: 0px;
   }
 
   div#indicatorbar {

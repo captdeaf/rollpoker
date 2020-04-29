@@ -130,6 +130,26 @@ VIEWS.Poker = new View({
     "cmdcall": function() {
       CommandQueue.Queue("Call", {});
     },
+    "cmdbet": function() {
+      CommandQueue.Queue("Bet", {amount: "" + (this.Bet + (Player.Table.CurBet - Player.info.Bet))});
+    },
+    "addbb": function() {
+      this.WannaBet(this.Bet + Player.Table.Blinds[Player.Table.Blinds.length - 1]);
+    },
+    "subbb": function() {
+      this.WannaBet(this.Bet - Player.Table.Blinds[Player.Table.Blinds.length - 1]);
+    },
+    "subpot": function() {
+      this.WannaBet(this.Bet - Player.Table.Pot);
+    },
+    "addpot": function() {
+      this.WannaBet(this.Bet + Player.Table.Pot);
+    },
+  },
+  OnChange: {
+    "raiseval": function(evt) {
+      this.WannaBet(parseInt(evt.target.value, 10));
+    }
   },
   Start: function() {
     $('body').html(this.T.View());
@@ -145,17 +165,15 @@ VIEWS.Poker = new View({
     }
     CommandQueue.OnTurnStart();
   },
-  CHIP_VALS: "",
-  CUR_BET: -1,
   Update: function(data) {
     // TODO: Pick my table out from multiple tables.
-    var tableData = data.Tables["table0"];
-    var table = $(this.T.Table({game: data, table:tableData, players: data.Players}));
+    Player.Table = data.Tables["table0"];
+    var table = $(this.T.Table({game: data, table:Player.Table, players: data.Players}));
     $('#mytable').empty();
     $('#mytable').append(table);
     if (_.any(Player.info)) {
       if (_.any(Player.pdata.Cards)) {
-        if (this.ValueDiffers("Hand", Player.pdata.Cards)) {
+        if (this.ValueDiffers("hand", Player.pdata.Cards)) {
           this.UpdateHand(Player.info);
           this.ClearIndicator();
         }
@@ -164,6 +182,9 @@ VIEWS.Poker = new View({
             this.OnTurnStart();
             this.ClearIndicator();
           }
+        }
+        if (this.ValueDiffers("minbet", Player.Table.MinBet)) {
+          this.WannaBet(Player.Table.MinBet);
         }
         $('#myhand').show();
         $('#betplaque').show();
@@ -175,26 +196,33 @@ VIEWS.Poker = new View({
     }
   },
   LASTHAND: [],
-  MINBET: -1,
-  CURBET: -1,
-  PLYBET: -1,
-  UpdateBetPlaque: function(tableData, player, val) {
-    if (this.MINBET != tableData.MinBet || this.CURBET != tableData.CurBet ||
-        player.Bet != this.PLYBET) {
-      this.MINBET = tableData.MinBet;
-      this.CURBET = tableData.CurBet;
-      this.PLYBET = player.Bet;
-      $('button[name="betadd"]').text("+ " + this.MINBET);
-      $('button[name="betsub"]').text("- " + this.MINBET);
-      var inp = $('input.betp');
-      inp.val(tableData.CurBet - Player.info.Bet);
-      var callbutt = $('button[name="betcall"]');
-      if (tableData.CurBet - Player.info.Bet == 0) {
-        callbutt.text("0 (Check)");
-      } else {
-        callbutt.text((tableData.CurBet - Player.info.Bet) + " (Call)");
-      }
-      inp.trigger("change");
+  Bet: 0,
+  GetBetAmount: function(amt, maxbet) {
+    if (maxbet <= amt) {
+      // Can't bet higher than the chips you have
+      return maxbet;
+    }
+    if (amt > maxbet) {
+      // Can't bet more than you have
+      return maxbet;
+    }
+    if (maxbet < Player.Table.MinBet) {
+      // Can't bet lower than MinBet unless you're all-in.
+      return maxbet;
+    }
+    if (amt < Player.Table.MinBet) {
+      return Player.Table.MinBet;
+    }
+    return amt;
+  },
+  WannaBet: function(amt) {
+    var maxbet = Player.info.Chips - (Player.Table.CurBet - Player.info.Bet);
+    this.Bet = this.GetBetAmount(amt, maxbet);
+    $("#betval").val(this.Bet)
+    if (this.Bet == maxbet) {
+      console.log("All In");
+      // ALL IN
+      // $("#cmdbet").text("All-In");
     }
   },
   UpdateHand: function(player) {
@@ -253,7 +281,7 @@ VIEWS.Poker = new View({
     },
     Bet: function(playerid, amt, opt) {
       var off = this.GetPlayerLocation(playerid);
-      Table.MaybeClearQueue();
+      CommandQueue.MaybeClearQueue();
       if (off) {
         Helpers.RaiseText(off, opt + " " + amt);
       }

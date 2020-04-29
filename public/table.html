@@ -43,7 +43,7 @@
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
       <div id="<%= player.PlayerId %>" class="playerinfo <%= seat %> <%= player.State %>">
         <div class="playerhand hand">
-          <% if (player.PlayerId == Player.uid) { %>
+          <% if (player.PlayerId == Player.uid && Player.pdata) { %>
             <% _.each(Player.pdata.Cards, function(cardval) { %>
                 <div class="card <%= cardval %>"></div>
             <% }); %>
@@ -105,6 +105,11 @@
           <button id="cmdbet">Bet/Raise</button>
         </div>
         <div id="myhand" class="myhand"></div>
+        <div id="betplaque" class="betplaque">
+          <input type="text" id="betval" pattern="\d+" id="raiseval"><br>
+          <button id="subbb">- BB</button> <button id="addbb">+ BB</button><br>
+          <button id="subpot">- Pot</button> <button id="addpot">+ Pot</button><br>
+        </div>
         <div id="indicatorbar" style="display:none;"><tt id="indication"></tt><button id="cancelindicate">(Oops, Cancel)</button></div>
       </div>
     <% } %>
@@ -140,10 +145,10 @@
       <br>
       <% if (Player.info) { %>
         You are registered for the upcoming tournament.<br><br>
-        <% var count = _.keys(Game.data.Players).length; if (count > 1) { %>
-        <button id="startgame" class="gamebutton">Start the Tournament with <%= count %> players!</button>
+        <% if (_.keys(data.Players).length > 1) { %>
+        <button id="startgame" class="gamebutton">Start the Tournament with <%= _.keys(data.Players).length %> players!</button>
         <% } %>
-      <% } else if (Game.data.Members && Game.data.Members.length > 0) { %>
+      <% } else if (_.any(data.Members)) { %>
         <form id="signup">
         <button class="gamebutton">Sign up for the next Tournament</button>
         </form>

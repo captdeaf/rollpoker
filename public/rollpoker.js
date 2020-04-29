@@ -80,7 +80,9 @@ var RollPoker = {
   },
   Update: function(doc) {
     Player.state = undefined;
-    Player.info = doc.Players[Player.uid];
+    if (doc.Players) {
+      Player.info = doc.Players[Player.uid];
+    }
     Game.data = doc;
     if (Game.LAST_STATE != doc.RoomState) {
       Game.LAST_STATE = doc.RoomState;
