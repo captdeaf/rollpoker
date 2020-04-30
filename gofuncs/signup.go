@@ -3,6 +3,17 @@ package rollpoker
 import (
 )
 
+func (player *Player) TryAllPlayerUpdate(rdata *RoomData, gc *GameCommand) *CommandResponse {
+	dname := gc.Args["DisplayName"]
+	if dname != "" {
+		rdata.Room.Members[gc.PlayerId] = dname;
+		if player != nil {
+			player.DisplayName = dname;
+		}
+	}
+	return CSave()
+}
+
 func (player *Player) TryAllJoinGroup(rdata *RoomData, gc *GameCommand) *CommandResponse {
 	roompass := gc.Args["RoomPass"]
 	if rdata.Room.OrigSettings.RoomPass != roompass {

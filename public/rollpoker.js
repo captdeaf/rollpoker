@@ -70,6 +70,7 @@ var RollPoker = {
     var eventmap = {
       "click touchstart": "Click",
       "submit": "Submit",
+      "change": "Change",
     };
     for (var ename in eventmap) {
       bind(ename, eventmap[ename]);

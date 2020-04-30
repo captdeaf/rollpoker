@@ -16,6 +16,7 @@
     <script type="text/javascript" src="/rollpoker.js"></script>
     <script type="text/javascript" src="/views.js"></script>
     <script type="text/javascript" src="/helpers.js"></script>
+    <script type="text/javascript" src="/menu.js"></script>
     <script type="text/javascript" src="/register.js"></script>
     <script type="text/javascript" src="/signup.js"></script>
     <script type="text/javascript" src="/poker.js"></script>
@@ -79,7 +80,7 @@
   </script>
   <script type="text/template" id="menucontents">
     <div id="closemenu"><tt>X</tt> GAME MENU:</div>
-    <label>Name: <input type="text" class="menutext" placeholder="Display Name" name="DisplayName" value="<%= Player.info.DisplayName %>"></label><br>
+    <label>Name: <input type="text" class="menutext" placeholder="Display Name" id="MenuDisplayName" value="<%= Player.info.DisplayName %>"></label><br>
     <% if (window.Notification && window.Notification.permission != "granted") { %>
       <button id="asknotifications">Enable Notifications</button>
     <% } %>

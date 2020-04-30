@@ -5,6 +5,7 @@ function View(attrs) {
   for (var name in attrs) {
     this[name] = attrs[name];
   }
+  this._subviews = [];
 };
 
 View.prototype.init = function() {
@@ -17,21 +18,41 @@ View.prototype.init = function() {
   }
 };
 
+View.prototype.AddSubview = function(elementid, view) {
+  console.log("ASV");
+  if (view.init) { view.init(); }
+  var el = $(elementid);
+  console.log("Start");
+  view.Start(el);
+  this._subviews.push({elid: elementid, view: view});
+}
+
+View.prototype.RemoveSubview = function(elementid) {
+  var sv = _.find(this._subviews, function(i) { return i.elid == elementid; });
+  this._subviews = _.filter(this._subviews, function(i) { return i.elid != elementid; });
+}
+
 View.prototype._handleEvent = function(name, evt) {
   // name == "Click", "Submit", etc. UpperCamelCase.
   var targ = evt.target;
   var handlers = this["On" + name];
-  if (!handlers) { return; }
+  if (!handlers) { return false; }
   while (targ != null && targ != undefined) {
     if (handlers[targ.id]) {
       evt.target = targ;
       if (handlers[targ.id].call(this, evt) != true) {
         evt.preventDefault();
         evt.stopPropagation();
-        return
+        return true
       }
     }
     targ = targ.parentElement;
+  }
+  for (var i in this._subviews) {
+    var sv = this._subviews[i].view;
+    if (sv._handleEvent) {
+      if (sv._handleEvent(name, evt)) { return true; }
+    }
   }
 };
 

@@ -113,7 +113,6 @@ VIEWS.Poker = new View({
     Table: "#maintable",
     View: "#tableview",
     Hand: "#myhandview",
-    Menu: "#menucontents",
   },
   OnClick: {
     "betadd": function() {
@@ -126,10 +125,11 @@ VIEWS.Poker = new View({
     },
     "cardsettings": function() {
       var menu = $("#menu");
-      menu.html(this.T.Menu({data: Game.data, player: Player.info}));
+      this.AddSubview("#menu", VIEWS.Menu);
       menu.show();
     },
     "closemenu": function() {
+      this.RemoveSubview("#menu");
       $("#menu").hide();
     },
     "asknotifications": function() {
@@ -167,7 +167,7 @@ VIEWS.Poker = new View({
     },
   },
   OnChange: {
-    "raiseval": function(evt) {
+    "betval": function(evt) {
       this.WannaBet(parseInt(evt.target.value, 10));
     }
   },
