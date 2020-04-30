@@ -117,11 +117,16 @@ func (game *RoomData) BustOut(tablename string, _ int) bool {
 	for _, table := range game.Room.Tables {
 		ranking += len(table.Seats)
 	}
+	stillins := 0
+	var lastin *Player
 	for seat, pid := range table.Seats {
 		player := game.Room.Players[pid]
 		if player.Chips == 0 {
 			busts = append(busts, player)
 			delete(table.Seats, seat)
+		} else {
+			stillins += 1
+			lastin = player
 		}
 	}
 	if len(busts) > 0 {
@@ -134,6 +139,14 @@ func (game *RoomData) BustOut(tablename string, _ int) bool {
 			player.State = BUSTED
 			player.DisplayState = "Busted out"
 		}
+	}
+	if stillins == 1 {
+		lastin.State = WON
+		lastin.DisplayState = "Tournament Winner"
+		LogEvent(game, "Won", lastin.PlayerId)
+		LogMessage(game, "%s Won the tournament!", lastin.DisplayName)
+		table.Dolist = make(GameDef, len(GAME_COMMANDS["_tourneywon"]))
+		copy(table.Dolist, GAME_COMMANDS["_tourneywon"])
 	}
 	return true
 }
@@ -319,22 +332,28 @@ func (game *RoomData) TexWin(tablename string, _ int) bool {
 		hand := GetPlayerHand(game, pid)
 		if player.State != FOLDED {
 			allhands[idx].Cards, allhands[idx].Hand, allhands[idx].Score = GetTexasRank(hand, table.Cards["board"])
-			fmt.Printf("%s in. Score: %.6x Hand: %s?\n", player.DisplayName, allhands[idx].Score, allhands[idx].Hand)
+			LogMessage(game, "%s has %s: <<%s>>",
+					 player.DisplayName,
+					 allhands[idx].Hand, strings.Join(allhands[idx].Cards, ">> <<"))
 		} else {
-			fmt.Printf("%s folded?\n", player.DisplayName)
 			allhands[idx].Hand = ""
 			allhands[idx].Score = 0
 		}
 		idx++
 	}
 
-	fmt.Printf("ALlhands: %d", len(allhands))
 	pots := MakePots(game, table, allhands)
-	for _, pot := range pots {
-		fmt.Printf("Pot: %v. %d players, %d winners.\n", pot, len(pot.PlayerHands), len(pot.WinningHands))
-	}
 	PayoutPots(game, pots, allhands)
 	return true
+}
+
+func (game *RoomData) GameWon(tablename string, _ int) bool {
+	return true
+}
+
+func (game *RoomData) ClearGame(tablename string, _ int) bool {
+	game.Room.RoomState = SIGNUP
+	return false
 }
 
 func (game *RoomData) FoldedWin(tablename string, _ int) bool {

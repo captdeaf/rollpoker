@@ -142,7 +142,7 @@
       <br>
       <% if (Player.info) { %>
         You are registered for the upcoming tournament.<br><br>
-        <% if (_.keys(data.Players).length > 1) { %>
+        <% if (Game.data.Hosts[Player.uid] && _.keys(data.Players).length > 1) { %>
         <button id="startgame" class="gamebutton">Start the Tournament with <%= _.keys(data.Players).length %> players!</button>
         <% } %>
       <% } else if (_.any(data.Members)) { %>
@@ -161,7 +161,7 @@
       <% if (Game.data.Members && _.keys(Game.data.Members).length > 0) { %>
       <br><br>
         Members of <%= Game.name %>:<br>
-        <%= _.values(Game.data.Members).join(", ") %>
+        <%= Render.Members() %>
       <% } %>
     </div>
   </script>

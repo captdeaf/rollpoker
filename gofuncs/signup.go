@@ -3,7 +3,7 @@ package rollpoker
 import (
 )
 
-func (player *Player) TrySignupJoinGroup(rdata *RoomData, gc *GameCommand) *CommandResponse {
+func (player *Player) TryAllJoinGroup(rdata *RoomData, gc *GameCommand) *CommandResponse {
 	roompass := gc.Args["RoomPass"]
 	if rdata.Room.OrigSettings.RoomPass != roompass {
 		return CError("Invalid password")

@@ -19,8 +19,7 @@ import (
 )
 
 var BASE_URI string = "https://rollpoker.web.app"
-var SEND_EMAIL bool = true
-var FAKE_COMMANDS bool = false
+var RESPOND_PANIC = true
 
 type GameSettings struct {
 	GameType	string	// Cash, SitNGo
@@ -65,6 +64,7 @@ type GameRoom struct {
 	BlindTime	int64
 	PausedAt	int64		// Nonzero if paused
 	Members		map[string]string	// People who can view and sign up, and their display names.
+	Hosts		map[string]string	// Hosts can start games, end games, and kick people. And promote other members to hosts.
 }
 
 type LogItem struct {
@@ -161,6 +161,12 @@ type GameResponse struct {
 }
 
 func MakeTable(w http.ResponseWriter, r *http.Request) {
+	var uid = GetUserIDFromHeader(r)
+	if uid == "" {
+		http.Error(w, "false", http.StatusBadRequest)
+		return
+	}
+
 	var args map[string]string
 
 	err := json.NewDecoder(r.Body).Decode(&args)
@@ -198,6 +204,12 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 	newgame.Room.Tables = make(map[string]*TableState)
 	newgame.Room.RoomState = SIGNUP
 	newgame.Room.OrigSettings = &settings
+	newgame.Room.Members = make(map[string]string)
+	dname, has := args["DisplayName"]
+	if !has { dname = "Host" }
+	newgame.Room.Members[uid] = dname
+	newgame.Room.Hosts = make(map[string]string)
+	newgame.Room.Hosts[uid] = "OWNER"
 
 	FIRESTORE_CLIENT.RunTransaction(context.Background(),
 					func(ctx context.Context, tx *firestore.Transaction) error {
@@ -314,6 +326,7 @@ func CheckGameSanity(rdata *RoomData, hasCommandWaiting bool) string {
 	for _, table := range rdata.Room.Tables {
 		turncount := 0
 		betcount := 0
+		woncount := 0
 		totalChips += table.Pot
 		for _, pid := range table.Seats {
 			player := rdata.Room.Players[pid]
@@ -322,6 +335,9 @@ func CheckGameSanity(rdata *RoomData, hasCommandWaiting bool) string {
 			}
 			if player.State == BET {
 				betcount += 1
+			}
+			if player.State == WON {
+				woncount += 1
 			}
 			totalChips += player.Bet
 			totalChips += player.Chips
@@ -332,8 +348,11 @@ func CheckGameSanity(rdata *RoomData, hasCommandWaiting bool) string {
 		if betcount > 1 {
 			return "Multiple players at one table have BET"
 		}
-		if turncount != 1 && !hasCommandWaiting {
-			return "No TURN or Command going??"
+		if woncount > 1 {
+			return "Multiple players at one table have WON"
+		}
+		if woncount == 0 && turncount != 1 && !hasCommandWaiting {
+			return "No WON, TURN or Command going??"
 		}
 	}
 	expectedChips := len(rdata.Room.Players) * rdata.Room.GameSettings.StartingChips
@@ -375,11 +394,13 @@ func CResponse(errmsg string, run, save, willrun bool) *CommandResponse {
 
 func Poker(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain")
-	defer func() {
-		if r := recover(); r != nil {
-			http.Error(w, fmt.Sprintf("ERROR %v\n%v", r, string(debug.Stack())), http.StatusBadRequest)
-		}
-	}()
+	if RESPOND_PANIC {
+		defer func() {
+			if r := recover(); r != nil {
+				http.Error(w, fmt.Sprintf("ERROR %v\n%v", r, string(debug.Stack())), http.StatusBadRequest)
+			}
+		}()
+	}
 
 	// Only authorized players can run GameCommand commands.
 	var uid = GetUserIDFromHeader(r)
@@ -419,6 +440,9 @@ func Poker(w http.ResponseWriter, r *http.Request) {
 
 		// Call Command by name if it has one
 		method := reflect.ValueOf(player).MethodByName("Try" + rdata.Room.RoomState + gc.Command)
+		if !method.IsValid() {
+			method = reflect.ValueOf(player).MethodByName("TryAll" + gc.Command)
+		}
 		var cresp *CommandResponse
 
 		if method.IsValid() {

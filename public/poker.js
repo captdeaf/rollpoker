@@ -42,6 +42,16 @@ var Render = {
     [1000, "ze"],
     [5000, "zf"],
   ],
+  Members: function() {
+    var usernames = _.map(Game.data.Members, function(name, uid) {
+      if (Game.data.Hosts[uid]) {
+        return name + " (" + Game.data.Hosts[uid] + ")";
+      } else {
+        return name;
+      }
+    });
+    return usernames.join(", ");
+  },
   ChipStack: function(amt, cls) {
     // TODO TODO: Show biggest chips possible on down to smallest.
     if (!cls) { cls = "smallpiles"; }

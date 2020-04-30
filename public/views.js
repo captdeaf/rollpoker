@@ -1,3 +1,6 @@
+// VIEWS contains the renderers
+var VIEWS = {};
+
 function View(attrs) {
   for (var name in attrs) {
     this[name] = attrs[name];

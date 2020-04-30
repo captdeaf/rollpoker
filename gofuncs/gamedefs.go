@@ -38,8 +38,9 @@ func RunCommandInTransaction(game *RoomData, tablename string) time.Duration {
 	if rval[0].Bool() {
 		fmt.Printf("Popping: %s\n", cmd.Name)
 		table.Dolist = table.Dolist[1:]
-		fmt.Printf("Next: %v\n", table.Dolist[0])
-		fmt.Printf("Nextg: %v\n", game.Room.Tables[tablename].Dolist[0])
+		if len(table.Dolist) > 0 {
+			fmt.Printf("Next: %v\n", table.Dolist[0])
+		}
 		return cmd.Sleepfor
 	}
 	return -1
@@ -140,9 +141,14 @@ func init() {
 		{"NewGame", 0, 0},
 	}
 	GAME_COMMANDS["_foldedwin"] = GameDef {
-		{"Burn", 0, 0}, // This gets chopped off by return true
+		{"Idle", 0, 0}, // This gets chopped off by return true
 		{"CollectPot", 0, 0},
 		{"FoldedWin", 0, 5},
 		{"NewGame", 0, 0},
+	}
+	GAME_COMMANDS["_tourneywon"] = GameDef {
+		{"Idle", 0, 0}, // This gets chopped off by return true
+		{"GameWon", 0, 20},
+		{"ClearGame", 0, 0},
 	}
 }

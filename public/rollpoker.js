@@ -1,6 +1,3 @@
-// VIEWS contains the renderers
-var VIEWS = {};
-
 var Game = {
   name: "", // Game.name is table/{name}/...
   data: {}, // The full game structure.
@@ -78,7 +75,7 @@ var RollPoker = {
       bind(ename, eventmap[ename]);
     }
     RollPoker.timer = setInterval(function() {
-      if (RollPoker.Handler.OnSecond) {
+      if (RollPoker.Handler && RollPoker.Handler.OnSecond) {
         RollPoker.Handler.OnSecond();
       }
     }, 500);
