@@ -132,9 +132,6 @@ VIEWS.Poker = new View({
       this.RemoveSubview("#menu");
       $("#menu").hide();
     },
-    "asknotifications": function() {
-      Notification.requestPermission();
-    },
     "cancelindicate": function() {
       CommandQueue.Clear();
       this.ClearIndicator();

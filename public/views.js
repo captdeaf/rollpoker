@@ -19,10 +19,8 @@ View.prototype.init = function() {
 };
 
 View.prototype.AddSubview = function(elementid, view) {
-  console.log("ASV");
   if (view.init) { view.init(); }
   var el = $(elementid);
-  console.log("Start");
   view.Start(el);
   this._subviews.push({elid: elementid, view: view});
 }
@@ -36,17 +34,18 @@ View.prototype._handleEvent = function(name, evt) {
   // name == "Click", "Submit", etc. UpperCamelCase.
   var targ = evt.target;
   var handlers = this["On" + name];
-  if (!handlers) { return false; }
-  while (targ != null && targ != undefined) {
-    if (handlers[targ.id]) {
-      evt.target = targ;
-      if (handlers[targ.id].call(this, evt) != true) {
-        evt.preventDefault();
-        evt.stopPropagation();
-        return true
+  if (handlers) {
+    while (targ != null && targ != undefined) {
+      if (handlers[targ.id]) {
+        evt.target = targ;
+        if (handlers[targ.id].call(this, evt) != true) {
+          evt.preventDefault();
+          evt.stopPropagation();
+          return true
+        }
       }
+      targ = targ.parentElement;
     }
-    targ = targ.parentElement;
   }
   for (var i in this._subviews) {
     var sv = this._subviews[i].view;

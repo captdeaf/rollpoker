@@ -15,8 +15,8 @@
     <script type="text/javascript" src="/jquery-3.4.1.min.js"></script>
     <script type="text/javascript" src="/rollpoker.js"></script>
     <script type="text/javascript" src="/views.js"></script>
-    <script type="text/javascript" src="/helpers.js"></script>
     <script type="text/javascript" src="/menu.js"></script>
+    <script type="text/javascript" src="/helpers.js"></script>
     <script type="text/javascript" src="/register.js"></script>
     <script type="text/javascript" src="/signup.js"></script>
     <script type="text/javascript" src="/poker.js"></script>
@@ -84,6 +84,9 @@
     <% if (window.Notification && window.Notification.permission != "granted") { %>
       <button id="asknotifications">Enable Notifications</button>
     <% } %>
+    <% if (Game.data.RoomState != "Signup") { %>
+      <button id="endgame">End Game</button><br>
+    <% } %>
   </script>
   <script type="text/template" id="tableview">
     <div id="tables">
@@ -127,6 +130,10 @@
     </div>
   </script>
   <script type="text/template" id="joinview">
+    <% if (Game.data && Game.data.Members[Player.uid]) { %>
+      <div class="cardsettings" id="cardsettings"></div>
+      <div id="menu"></div>
+    <% } %>
     <% if (!_.isEmpty(data.Players)) { %>
       <h3>Players currently signed up for the tournament:</h3>
       <div id="signups">

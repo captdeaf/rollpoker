@@ -3,10 +3,17 @@ VIEWS.Menu = new View({
     Menu: "#menucontents",
   },
   Start: function(el) {
-    console.log("Menu.start");
     el.html(this.T.Menu({game: Game.data, player: Player.info}));
   },
   OnClick: {
+    "asknotifications": function() {
+      Notification.requestPermission();
+    },
+    "endgame": function() {
+      if (confirm("Are you sure you want to end the game?")) {
+        RollPoker.SendCommand("EndGame", {});
+      }
+    },
   },
   OnChange: {
     "MenuDisplayName": function(evt) {

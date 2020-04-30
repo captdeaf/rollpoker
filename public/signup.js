@@ -12,6 +12,15 @@ VIEWS.Signup = new View({
     "startgame": function(evt) {
       RollPoker.SendCommand("StartPoker");
     },
+    "cardsettings": function() {
+      var menu = $("#menu");
+      this.AddSubview("#menu", VIEWS.Menu);
+      menu.show();
+    },
+    "closemenu": function() {
+      this.RemoveSubview("#menu");
+      $("#menu").hide();
+    },
   },
   OnSubmit: {
     "signup": function(evt) {

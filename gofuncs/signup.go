@@ -3,13 +3,24 @@ package rollpoker
 import (
 )
 
+func (player *Player) TryAllEndGame(rdata *RoomData, gc *GameCommand) *CommandResponse {
+	_, has := rdata.Room.Hosts[gc.PlayerId]
+	if !has {
+		return CError("You are not a Host")
+	}
+	rdata.Room.RoomState = SIGNUP
+	return CSave()
+}
+
 func (player *Player) TryAllPlayerUpdate(rdata *RoomData, gc *GameCommand) *CommandResponse {
 	dname := gc.Args["DisplayName"]
 	if dname != "" {
-		rdata.Room.Members[gc.PlayerId] = dname;
+		rdata.Room.Members[gc.PlayerId] = dname
 		if player != nil {
-			player.DisplayName = dname;
+			player.DisplayName = dname
 		}
+	} else {
+		return CError("Bad display name")
 	}
 	return CSave()
 }
