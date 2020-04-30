@@ -77,6 +77,11 @@ var RollPoker = {
     for (var ename in eventmap) {
       bind(ename, eventmap[ename]);
     }
+    RollPoker.timer = setInterval(function() {
+      if (RollPoker.Handler.OnSecond) {
+        RollPoker.Handler.OnSecond();
+      }
+    }, 500);
   },
   Update: function(doc) {
     Player.state = undefined;

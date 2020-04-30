@@ -87,4 +87,13 @@ RegisterTest("Uno Man bug", func() bool {
 	return true
 })
 
+RegisterTest("Weird allin bug", func() bool {
+	_, _, v1 := rollpoker.GetTexasRank([]string{"d8","dt"}, []string{"s2","dq","d2","hk","d4"})
+	_, _, v2 := rollpoker.GetTexasRank([]string{"ck","h7"}, []string{"s2","dq","d2","hk","d4"})
+
+	if v2 > v1 { return false }
+
+
+	return true
+})
 }

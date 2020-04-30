@@ -86,6 +86,16 @@ var Render = {
     }[card.substring(1,2)];
     return '<tt style="color:' + col + '">' + cname + suit + "</tt> ";
   },
+  TimeLeft: function() {
+    var timeleft = Game.data.BlindTime - Math.floor((new Date()).getTime() / 1000);
+    if (timeleft < 0) {
+      return "Next Hand";
+    }
+    if (timeleft < 120) {
+      return "" + timeleft + "s";
+    }
+    return "" + Math.round(timeleft/60) + "m";
+  }
 };
 
 VIEWS.Poker = new View({
@@ -260,9 +270,15 @@ VIEWS.Poker = new View({
     this.INDICATING = undefined;
     $("#indicatorbar").hide();
   },
-  onEvent: {
+  OnSecond: function() {
+    $("#timeleft").text(Render.TimeLeft());
+  },
+  OnEvent: {
+    StartBets: function() {
+      CommandQueue.Clear();
+      this.ClearIndicator();
+    },
     Call: function(playerid, amt, opt) {
-      console.log("Call?");
       var off = this.GetPlayerLocation(playerid);
       if (off) {
         if (amt == 0) {
@@ -274,7 +290,6 @@ VIEWS.Poker = new View({
     },
     Fold: function(playerid) {
       var off = this.GetPlayerLocation(playerid);
-      Table.MaybeClearQueue();
       if (off) {
         Helpers.RaiseText(off, "Folded");
       }

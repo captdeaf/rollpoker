@@ -33,8 +33,8 @@ View.prototype._handleEvent = function(name, evt) {
 };
 
 View.prototype._gameEvent = function(name, args) {
-  if (this.onEvent[name]) {
-    this.onEvent[name].apply(this, args);
+  if (this.OnEvent[name]) {
+    this.OnEvent[name].apply(this, args);
   } else {
     console.log("No Events[" + name + "]!");
   }

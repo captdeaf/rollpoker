@@ -5,10 +5,12 @@ BUGS:
 * Can't duplicate: kqq87 beat kqqtt somehow? Winner was all-in from Flop.
 * Queued: Bet, should be Call.
 * On raise, MinBet is set improperly if Player.Bet = 25 and CurBet = 50.
+* MinBet 100 didn't work
+* All-in Bustout not working?
+* Can't become Member when it's in Poker.
+* Pot of 200 split between two winners says 200
 
 TODO:
-* Tournament features
-* Blind schedules
 * Pause blinds
 * Ranking list
 * Menu: Quit game, return to registry, Kick Player, kickstart game
@@ -16,6 +18,9 @@ TODO:
 * Cash game support
   * Buyin button
   * Cashout button
+
+MAYBES:
+* PubSub for timeout events.
 
 SUGGESTIONS:
 * Muck cards or show 'em on loss?
@@ -68,3 +73,5 @@ FIXED:
 * Add bet amounts to green status div and player state. Use DisplayState?
 * USE FIREBASE USERS.
 
+* Tournament features
+* Blind schedules

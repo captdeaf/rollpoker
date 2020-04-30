@@ -32,13 +32,10 @@
           <% if (game.CurrentBlinds[1]) { %>
             <div class="tinfo">BB: <tt><%= game.CurrentBlinds[1] %></tt></div>
           <% } %>
-        <% } %>
-        <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
-          <% if (player.State == "TURN") { %>
-            <div class="tinfo">Betting: <tt><%= player.DisplayName %></tt></div>
+          <% if (_.any(Game.data.GameSettings.BlindStructure)) { %>
+            <div class="tinfo">For: <tt id="timeleft"><%= Render.TimeLeft() %></tt></div>
           <% } %>
         <% } %>
-        <div class="tinfo">Pot: <tt><%= table.Pot %></tt></div>
       </div>
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
       <div id="<%= player.PlayerId %>" class="playerinfo <%= seat %> <%= player.State %>">
@@ -84,7 +81,7 @@
     <div id="closemenu"><tt>X</tt> GAME MENU:</div>
     <label>Name: <input type="text" class="menutext" placeholder="Display Name" name="DisplayName" value="<%= Player.info.DisplayName %>"></label><br>
     <% if (window.Notification && window.Notification.permission != "granted") { %>
-      <button id="notifications">Enable Notifications</button>
+      <button id="asknotifications">Enable Notifications</button>
     <% } %>
   </script>
   <script type="text/template" id="tableview">

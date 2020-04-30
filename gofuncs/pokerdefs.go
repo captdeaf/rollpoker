@@ -2,11 +2,43 @@
 package rollpoker
 
 import (
+	"time"
+	"strconv"
 	"strings"
 	"fmt"
 	"sort"
 	"math/rand"
 )
+
+func UpdateTournament(rdata *RoomData) {
+	// UpdateTournament:
+	// 1) Checks if BlindTimes has passed. If so:
+	// 2) Advances blinds.
+	// 3) Resets timer.
+	if rdata.Room.BlindTime > time.Now().Unix() {
+		return
+	}
+	blindstr := rdata.Room.GameSettings.BlindStructure[0]
+	if len(rdata.Room.GameSettings.BlindStructure) > 0 {
+		rdata.Room.GameSettings.BlindStructure = rdata.Room.GameSettings.BlindStructure[1:]
+		if len(rdata.Room.GameSettings.BlindTimes) > 0 {
+			blindMinutes := rdata.Room.GameSettings.BlindTimes[0]
+			if len(rdata.Room.GameSettings.BlindTimes) > 1 {
+				rdata.Room.GameSettings.BlindTimes = rdata.Room.GameSettings.BlindTimes[1:]
+			}
+			rdata.Room.BlindTime = time.Now().Unix() + int64(60 * blindMinutes) // TODO: Now + blindTime.
+		}
+	}
+
+	blindsplit := strings.Fields(blindstr)
+	rdata.Room.CurrentBlinds = make([]int,len(blindsplit))
+	for i, val := range blindsplit {
+		ival, _ := strconv.ParseInt(val, 10, 32)
+		rdata.Room.CurrentBlinds[i] = int(ival)
+	}
+
+	LogEvent(rdata, "BlindIncrease", blindstr)
+}
 
 func (game *RoomData) Shuffle(tablename string, _ int) bool {
 	DECK := []string{
@@ -107,6 +139,7 @@ func (game *RoomData) BustOut(tablename string, _ int) bool {
 }
 
 func (game *RoomData) NewGame(tablename string, _ int) bool {
+	UpdateTournament(game)
 	table := game.Room.Tables[tablename]
 	table.Dolist = make(GameDef, len(GAME_COMMANDS["texasholdem"]))
 	table.Dealer = GetNextPlayer(game, table, table.Dealer)
@@ -175,6 +208,7 @@ func MakePots(game *RoomData, table *TableState, allhands []*PlayerHand) []*Pot 
 		player.Bet = 0
 	}
 	fmt.Printf("# of seenpots: %d\n", len(seenpots))
+	fmt.Printf("# of stillins: %d\n", len(stillins))
 	pots, idx := make([]*Pot, len(seenpots)), 0
 	for amt, _ := range seenpots {
 		pots[idx] = new(Pot)
@@ -197,7 +231,7 @@ func MakePots(game *RoomData, table *TableState, allhands []*PlayerHand) []*Pot 
 			if max > taken {
 				pots[idx].Chips += max - taken
 
-				if player.State == CALLED || player.State == ALLIN || player.State == BET {
+				if player.State != FOLDED {
 					pots[idx].PlayerHands = append(pots[idx].PlayerHands, phand)
 				}
 			}
@@ -260,7 +294,7 @@ func DivvyPot(game *RoomData, pot *Pot) {
 		player.Hand = GetPlayerHand(game, player.PlayerId)
 		LogEvent(game, "Win", player.PlayerId, pot.Chips, phand.Hand, strings.Join(phand.Cards," "))
 		LogMessage(game, "%s wins %d with %s: <<%s>>",
-				 player.DisplayName, pot.Chips,
+				 player.DisplayName, amt,
 				 phand.Hand, strings.Join(phand.Cards, ">> <<"))
 		player.DisplayState = phand.Hand
 	}
@@ -285,14 +319,20 @@ func (game *RoomData) TexWin(tablename string, _ int) bool {
 		hand := GetPlayerHand(game, pid)
 		if player.State != FOLDED {
 			allhands[idx].Cards, allhands[idx].Hand, allhands[idx].Score = GetTexasRank(hand, table.Cards["board"])
+			fmt.Printf("%s in. Score: %.6x Hand: %s?\n", player.DisplayName, allhands[idx].Score, allhands[idx].Hand)
 		} else {
+			fmt.Printf("%s folded?\n", player.DisplayName)
 			allhands[idx].Hand = ""
 			allhands[idx].Score = 0
 		}
 		idx++
 	}
 
+	fmt.Printf("ALlhands: %d", len(allhands))
 	pots := MakePots(game, table, allhands)
+	for _, pot := range pots {
+		fmt.Printf("Pot: %v. %d players, %d winners.\n", pot, len(pot.PlayerHands), len(pot.WinningHands))
+	}
 	PayoutPots(game, pots, allhands)
 	return true
 }
@@ -479,6 +519,7 @@ func (game *RoomData) ClearBets(tablename string, _ int) bool {
 			}
 		}
 	}
+	LogEvent(game, "StartBets")
 	table.MinBet = game.Room.CurrentBlinds[len(game.Room.CurrentBlinds) - 1]
 	table.CurBet = 0
 	return true

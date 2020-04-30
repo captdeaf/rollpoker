@@ -60,16 +60,22 @@ func (player *Player) TrySignupStartPoker(rdata *RoomData, gc *GameCommand) *Com
 	copy(table.Dolist, GAME_COMMANDS["texasholdem"])
 
 	blindstr := rdata.Room.GameSettings.BlindStructure[0]
-	if len(rdata.Room.GameSettings.BlindStructure) > 1 {
+	if len(rdata.Room.GameSettings.BlindStructure) > 0 {
 		rdata.Room.GameSettings.BlindStructure = rdata.Room.GameSettings.BlindStructure[1:]
+		if len(rdata.Room.GameSettings.BlindTimes) > 0 {
+			blindMinutes := rdata.Room.GameSettings.BlindTimes[0]
+			if len(rdata.Room.GameSettings.BlindTimes) > 1 {
+				rdata.Room.GameSettings.BlindTimes = rdata.Room.GameSettings.BlindTimes[1:]
+			}
+			rdata.Room.BlindTime = time.Now().Unix() + int64(60 * blindMinutes) // TODO: Now + blindTime.
+		}
 	}
 
-	blindsplit := strings.Fields(blindstr)
-	rdata.Room.CurrentBlinds = make([]int,len(blindsplit))
-	rdata.Room.BlindTime = 0 // TODO: Now + blindTime.
 	rdata.Room.PausedAt = 0
 	rdata.Room.RoomState = POKER
 
+	blindsplit := strings.Fields(blindstr)
+	rdata.Room.CurrentBlinds = make([]int,len(blindsplit))
 	for i, val := range blindsplit {
 		ival, _ := strconv.ParseInt(val, 10, 32)
 		rdata.Room.CurrentBlinds[i] = int(ival)
