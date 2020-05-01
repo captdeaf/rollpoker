@@ -191,7 +191,6 @@ VIEWS.Poker = new View({
     if (_.any(Player.info)) {
       if (_.any(Player.pdata.Cards)) {
         if (this.ValueDiffers("hand", Player.pdata.Cards)) {
-          this.UpdateHand(Player.info);
           this.ClearIndicator();
         }
         if (this.ValueDiffers("State", Player.info.State)) {

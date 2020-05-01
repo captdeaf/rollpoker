@@ -22,6 +22,9 @@ case "$1" in
     firebase deploy
     # And deploy gofuncs to gcloud functions
     ;;
+  rules)
+    firebase deploy --only firestore:rules
+    ;;
   godeploy)
     for func in $funcs ; do
       (cd gofuncs ; gcloud functions deploy $func --runtime go113 --trigger-http --allow-unauthenticated)

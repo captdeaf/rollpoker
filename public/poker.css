@@ -108,18 +108,39 @@
   }
 
   div#logscreen {
-    overflow: scroll;
-    width: 400px;
-    height: 400px;
-    position: absolute;
-    left: 650px;
-    top: 50px;
+    display: inline-block;
+    overflow-y: scroll;
+    width: 260px;
+    height: 140px;
+    position: relative;
+    left: 20px;
+    top: 20px;
     color: white;
+    font-size: 12px;
+  }
+  #logscreen p {
+    display: block;
+    padding: 0;
+    margin: 0;
+  }
+  button {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: lightgray;
+  }
+  button:active {
+    background-color: gray;
+  }
+  input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
   }
 
   div.betplaque {
     position: relative;
-    left: 300px;
+    left: 0px;
     top: 0px;
     width: 190px;
     display: inline-block;
@@ -148,6 +169,11 @@
     width: 60px;
     height: 80px;
     display: inline-block;
+  }
+
+  div.hand .card {
+    transform: scale(1.2);
+    transform-origin: 0 0;
   }
 
   div.hand .card:not(:first-child) {
@@ -230,16 +256,28 @@
     background-color: #666666dd;
   }
 
+  img.statusicon {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 30px;
+    height: 30px;
+  }
+
   div.playername {
     padding: 5pt;
     font-size: 120%;
     font-weight: bold;
     height: 24px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px
   }
-  div.playername > tt {
+  tt.cash {
     position: absolute;
     right: 5px;
-    top: 5px;
+    bottom: 5px;
     font-weight: bold;
     font-size: 20px;
     color: darkred;
@@ -273,10 +311,6 @@
     top: 50px;
     left: 10px;
     color: white;
-  }
-
-  p tt {
-    font-size: 12pt;
   }
 
   div.smallpiles {
@@ -314,16 +348,16 @@
 
   div.playerhand {
     position: absolute;
-    top: 0px;
+    top: -20px;
     right: 10px;
   }
 
   div.board {
     position: absolute;
-    top: 45%;
-    left: 50%;
+    top: 240px;
+    left: 500px;
     transform-origin: 0 0;
-    transform: scale(0.8);
+    transform: scale(0.9);
     margin-left: -120px;
   }
 
@@ -343,12 +377,12 @@
     background-repeat: no-repeat;
     background-position: 50px 130px;
     transform-origin: 0 0;
-    transform: scale(0.6);
+    transform: scale(0.5);
   }
   
   div#tables {
-    height: 370px;
-    width: 600px;
+    height: 290px;
+    width: 400px;
   }
 
   div.betplaque button {

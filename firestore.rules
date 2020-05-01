@@ -5,6 +5,10 @@ service cloud.firestore {
       match /log/{logid} {
         allow read: if request.auth.uid in get(/databases/$(database)/documents/games/$(document)).data.Members;
       }
+      match /act/{userid} {
+        allow read: if request.auth.uid in get(/databases/$(database)/documents/games/$(document)).data.Members;
+        allow write: if request.auth.uid == userid;
+      }
       match /data/{userid} {
         allow read: if request.auth.uid == userid;
       }

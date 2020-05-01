@@ -11,8 +11,9 @@ var Player = {
   pdata: {}, // From game/data/<uid>
 };
 
+var Presences = {};
+
 var RollPoker = {
-  HEADERS: {},
   SetupFirebase: function() {
     // Your web app's Firebase configuration
     var firebaseConfig = {
@@ -33,9 +34,6 @@ var RollPoker = {
         console.log("Registered as " + user.displayName);
         Player.uid = user.uid;
         Player.authuser = user;
-        user.getIdToken().then(function(token) {
-          RollPoker.HEADERS["Authorization"] = "Bearer " + token;
-        });
         cb();
       } else {
         console.log("Not registered");
@@ -58,10 +56,63 @@ var RollPoker = {
     // Start monitoring.
     RollPoker.Monitor();
     RollPoker.HandleEvents();
+    RollPoker.ResetActivity();
+    RollPoker.UpdateActivity();
+    RollPoker.UpdatePresences();
+  },
+  Timestamp: function() {
+    return Math.floor(new Date().getTime() / 1000);
+  },
+  LAST_ACTIVITY: 0,
+  ResetActivity: function() {
+    RollPoker.LAST_ACTIVITY = RollPoker.Timestamp();
+  },
+  UpdateActivity: function() {
+    var actref = RollPoker.DB.doc("/games/" + Game.name + "/act/" + Player.uid);
+    actref.set({
+      timestamp: RollPoker.Timestamp(),
+      activity: RollPoker.LAST_ACTIVITY,
+    });
+  },
+  UpdatePresences: function() {
+    var actref = RollPoker.DB.collection("/games/" + Game.name + "/act/");
+    actref.get().then(function(docs) {
+      var changed = false;
+      docs.forEach(function(doc) {
+        // Less than 3 minutes idle = awake
+        // Less than 10 idle = idle
+        // Less than 30 idle = asleep
+        // Else offline
+        var pid = doc.id; // Player UID
+        var activity = doc.data();
+        var now = RollPoker.Timestamp();
+        var idle_since = now - activity.activity;
+        var presence = "Offline";
+        // If activity.timestamp is more than 1 minute old,
+        // player is likely offline.
+        if (activity.timestamp > (now - 60)) {
+          if (idle_since < 180) {
+            presence = "Active";
+          } else if (idle_since < 600) {
+            presence = "Idle";
+          } else if (idle_since < 1800) {
+            presence = "Asleep";
+          }
+        }
+        if (Presences[pid] != presence) {
+          changed = true;
+          Presences[pid] = presence;
+        }
+      });
+      if (changed) {
+        RollPoker.Update(Game.data);
+      }
+    });
   },
   HandleEvents: function() {
     function bind(ename, name) {
       $(window).on(ename, function(evt) {
+        RollPoker.ResetActivity();
         if (RollPoker.Handler._handleEvent) {
           RollPoker.Handler._handleEvent(name, evt);
         }
@@ -71,15 +122,40 @@ var RollPoker = {
       "click touchstart": "Click",
       "submit": "Submit",
       "change": "Change",
+      "mousemove": "MouseMove",
+      "mousedown": "MouseDown",
+      "mouseup": "MouseUp",
+      "keydown": "KeyDown",
+      "keyup": "KeyUp",
     };
     for (var ename in eventmap) {
       bind(ename, eventmap[ename]);
     }
-    RollPoker.timer = setInterval(function() {
+    // Every half second we tick the Handler, in case of
+    // timed events (such as countdown for tournament blinds,
+    // and idle players not responding.)
+    RollPoker.TIMER = setInterval(function() {
       if (RollPoker.Handler && RollPoker.Handler.OnSecond) {
         RollPoker.Handler.OnSecond();
       }
     }, 500);
+    // Every 15 seconds we update our "Presence" document.
+    RollPoker.ACTIVITY_TIMER = setInterval(function() {
+      // If we are active within past 30 minutes, we update.
+      // Otherwise we're equivalent to offline.
+      var now = RollPoker.Timestamp();
+      if ((now - RollPoker.LAST_ACTIVITY) < (30*60)) {
+        RollPoker.UpdateActivity();
+      }
+    }, 15000);
+    // And if we're not idle, every 30 seconds we update
+    // all player presence from documents.
+    RollPoker.PRESENCE_TIMER = setInterval(function() {
+      var now = RollPoker.Timestamp();
+      if ((now - RollPoker.LAST_ACTIVITY) < (30*60)) {
+        RollPoker.UpdatePresences();
+      }
+    }, 30000)
   },
   Update: function(doc) {
     Player.state = undefined;
@@ -106,27 +182,31 @@ var RollPoker = {
       Args: args,
     };
     var headers = {};
-    $.ajax({
-      url: '/Poker',
-      type: 'POST',
-      dataType: 'text',
-      headers: RollPoker.HEADERS,
-      data: JSON.stringify(params),
-      success: function(result) {
-        if (onsucc) {
-          onsucc();
-        }
-      },
-      error: function(result) {
-        console.log("err", result.responseText);
-        alert(result.responseText);
-      },
+    Player.authuser.getIdToken().then(function(token) {
+      $.ajax({
+        url: '/Poker',
+        type: 'POST',
+        dataType: 'text',
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+        data: JSON.stringify(params),
+        success: function(result) {
+          if (onsucc) {
+            onsucc();
+          }
+        },
+        error: function(result) {
+          console.log("err", result.responseText);
+          alert(result.responseText);
+        },
+      });
     });
   },
   Monitor: function() {
     // Start monitoring the state documents.
-    var db = firebase.firestore();
-    var docref = db.doc("/games/" + Game.name);
+    RollPoker.DB = firebase.firestore();
+    var docref = RollPoker.DB.doc("/games/" + Game.name);
     Game.watchers.data = docref.onSnapshot(function(doc) {
       RollPoker.Update(doc.data());
     }, function(error) {
@@ -135,7 +215,7 @@ var RollPoker = {
         Players: [],
       });
     });
-    var dataref = db.doc("/games/" + Game.name + "/data/" + Player.uid);
+    var dataref = RollPoker.DB.doc("/games/" + Game.name + "/data/" + Player.uid);
     Game.watchers.data = dataref.onSnapshot(function(doc) {
       // In theory, pdata is always updated immediately before a
       // document update.
@@ -143,7 +223,7 @@ var RollPoker = {
       RollPoker.Update(Game.data);
     });
 
-    var logref = db.collection("/games/" + Game.name + "/log")
+    var logref = RollPoker.DB.collection("/games/" + Game.name + "/log")
     logref.orderBy("Timestamp", "desc").limit(30).get().then(function(logs) {
       RollPoker.ProcessLogs(logs, false);
       // Then start a tail.

@@ -54,7 +54,7 @@ func (player *Player) TrySignupStartPoker(rdata *RoomData, gc *GameCommand) *Com
 		table.Seats[allSeats[seatnum]] = pid
 	}
 	// First player is dealer, because player position is random, anyway.
-	table.Dealer = ""
+	table.Dealer = "seat2"
 	rdata.Room.Tables["table0"] = &table
 	table.Dolist = make(GameDef, len(GAME_COMMANDS["texasholdem"]))
 	copy(table.Dolist, GAME_COMMANDS["texasholdem"])

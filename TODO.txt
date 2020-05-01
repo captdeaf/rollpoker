@@ -2,22 +2,23 @@ Suggestions:
 * Flash on your turn
 
 BUGS:
-* Can't duplicate: kqq87 beat kqqtt somehow? Winner was all-in from Flop.
 * Queued: Bet, should be Call.
 * On raise, MinBet is set improperly if Player.Bet = 25 and CurBet = 50.
 * MinBet 100 didn't work
-* All-in Bustout not working?
-* Can't become Member when it's in Poker.
-* Pot of 200 split between two winners says 200
 
 TODO:
 * Pause blinds
 * Ranking list
-* Menu: Quit game, return to registry, Kick Player, kickstart game
-* Admin: Add Owner on creation, and sub-admins.
+* Menu: Kick Player, add and remove hosts.
 * Cash game support
   * Buyin button
   * Cashout button
+* Full-on Hand Log
+  List of: {
+    uid: "uid" or "all",
+    text: "Your hand: <<s4>>,<<d5>>"
+  }
+* View hand logs
 
 MAYBES:
 * PubSub for timeout events.
@@ -75,3 +76,9 @@ FIXED:
 
 * Tournament features
 * Blind schedules
+* Can't become Member when it's in Poker.
+* Can't duplicate: kqq87 beat kqqtt somehow? Winner was all-in from Flop.
+* All-in Bustout not working?
+* Pot of 200 split between two winners says 200
+* Menu: Quit game, return to signup
+* Admin: Add Owner on creation
