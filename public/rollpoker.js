@@ -109,7 +109,12 @@ var RollPoker = {
       }
     });
   },
+  MOUSE_HANDLER: undefined,
+  SetMouseHandler: function(obj) {
+    RollPoker.MOUSE_HANDLER = obj;
+  },
   HandleEvents: function() {
+    // Simple events:
     function bind(ename, name) {
       $(window).on(ename, function(evt) {
         RollPoker.ResetActivity();
@@ -119,18 +124,49 @@ var RollPoker = {
       });
     }
     var eventmap = {
-      "click touchstart": "Click",
       "submit": "Submit",
       "change": "Change",
-      "mousemove": "MouseMove",
-      "mousedown": "MouseDown",
-      "mouseup": "MouseUp",
       "keydown": "KeyDown",
       "keyup": "KeyUp",
     };
     for (var ename in eventmap) {
       bind(ename, eventmap[ename]);
     }
+    // Mouse and Touch events, we roll our own "click" because of
+    // the need for delayed activation w/ the Fold, Call and Bet buttons.
+    $(window).on("touchstart mousedown", function(evt) {
+      RollPoker.ResetActivity();
+      var started = (new Date()).getTime();
+      if (RollPoker.Handler._handleEvent("MouseDown", evt)) {
+        return;
+      }
+      RollPoker.SetMouseHandler({
+        End: function(newevt) {
+          if (evt.target == newevt.target) {
+            if ($(evt.target).hasClass("hold")) {
+              var now = (new Date().getTime());
+              if ((now - started) > 500) {
+                RollPoker.Handler._handleEvent("Click", newevt);
+              }
+            } else {
+              RollPoker.Handler._handleEvent("Click", newevt);
+            }
+          }
+        },
+      });
+    });
+    $(window).on("touchmove mousemove", function(evt) {
+      if (RollPoker.MOUSE_HANDLER && RollPoker.MOUSE_HANDLER.Move) {
+        RollPoker.MOUSE_HANDLER.Move(evt);
+      }
+    });
+    $(window).on("touchend mouseup", function(evt) {
+      if (RollPoker.MOUSE_HANDLER && RollPoker.MOUSE_HANDLER.End) {
+        RollPoker.MOUSE_HANDLER.End(evt);
+      }
+      // And clear MOUSE_HANDLER
+      RollPoker.MOUSE_HANDLER = undefined;
+    });
     // Every half second we tick the Handler, in case of
     // timed events (such as countdown for tournament blinds,
     // and idle players not responding.)

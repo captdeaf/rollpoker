@@ -155,9 +155,9 @@
     <% if (Player.uid && Player.state != "BUSTED") { %>
       <div id="lower">
         <div id="gamecommands">
-          <button id="cmdfold">Fold</button>
-          <button id="cmdcall">Call</button>
-          <button id="cmdbet">Bet/Raise</button>
+          <button id="cmdfold" class="hold">Fold</button>
+          <button id="cmdcall" class="hold">Call</button>
+          <button id="cmdbet" class="hold">Bet/Raise</button>
         </div>
         <div id="indicatorbar" style="display:none;"><tt id="indication"></tt><button id="cancelindicate">(Oops, Cancel)</button></div>
         <div id="logbet">

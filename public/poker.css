@@ -127,17 +127,10 @@
   button:enabled:active {
     background-color: gray;
   }
-  button#cmdfold:enabled:active {
+  button.hold:enabled:active {
     background-color: black;
-    transition: all 1.0s ease 0s;
-  }
-  button#cmdcall:enabled:active {
-    background-color: green;
-    transition: all 1.0s ease 0s;
-  }
-  button#cmdbet:enabled:active {
-    background-color: cyan;
-    transition: all 1.0s ease 0s;
+    box-shadow: 0px 0px 12px 12px #9999eedd;
+    transition: box-shadow 0s ease 0.5s, background-color 1.0s ease 0s;
   }
   input {
     -webkit-appearance: none;
