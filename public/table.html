@@ -40,7 +40,11 @@
       </div>
     <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
       <div id="<%= player.PlayerId %>" class="playerinfo <%= seat %> <%= player.State %>">
-        <div class="playerhand hand">
+        <% if (player.PlayerId == Player.uid && Player.pdata) { %>
+          <div class="playerhand hand myhand">
+        <% } else { %>
+          <div class="playerhand hand">
+        <% } %>
           <% if (player.PlayerId == Player.uid && Player.pdata) { %>
             <% _.each(Player.pdata.Cards, function(cardval) { %>
                 <div class="card <%= cardval %>"></div>
@@ -54,14 +58,9 @@
         <% if (seat == table.Dealer) { %>
           <div class="dealerbutton"></div>
         <% } %>
-        <div class="playerdata <%= player.State %>">
+        <div class="playerdata <%= player.State %> <%= Presences[player.PlayerId] %>">
         <div class="playername">
           <%= player.DisplayName %>
-          <% if (!Presences[player.PlayerId]) { %>
-            <img class="statusicon" src="/statusOffline.png">
-          <% } else { %>
-            <img class="statusicon" src="/status<%= Presences[player.PlayerId]%>.png">
-          <% } %>
         </div>
         <div class="playerstate">
           <%= player.DisplayState %>
@@ -86,15 +85,64 @@
       <% } %>
     <% } %>
   </script>
+  <script type="text/template" id="editsettingsview">
+    <% var orig = Game.data.OrigSettings; %>
+    <% if (Game.data.RoomState == "Poker") { %>
+      You may edit game settings here, but please be aware they will not
+      impact the ongoing game. You will have to restart the tournament or
+      ring game for changes to take effect.
+    <% } %>
+    <form id="gamesettings">
+      <table>
+        <tr>
+          <th>Game Type</th>
+          <td>
+            <select name="GameName">
+              <option value="texasholdem" selected>Texas Hold'em</option>
+              <option value="omahaholdem">Omaha Hold'em</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>Starting Chip Count</th>
+          <td><input type="text" name="StartingChips" value="<%= orig.StartingChips %>"></td>
+        </tr>
+        <tr>
+          <th>(SNG) Betting Structure</th>
+          <td><input type="text" name="BlindStructure" value="<%= orig.BlindStructure.join(",") %>"></td>
+        </tr>
+        <tr>
+          <th>(SNG) Blinds durations</th>
+          <td><input type="text" name="BlindTimes" value="<%= orig.BlindTimes.join(" ") %>"></td>
+        </tr>
+        <tr>
+          <th>Room Password</th>
+          <td><input type="text" name="RoomPass" value="<%= orig.RoomPass %>"></td>
+        </tr>
+      </table>
+      <input type="submit" value="Update Settings">
+    </form>
+  </script>
   <script type="text/template" id="menucontents">
     <div id="closemenu"><tt>X</tt> GAME MENU:</div>
     <label>Name: <input type="text" class="menutext" placeholder="Display Name" id="MenuDisplayName" value="<%= Game.data.Members[Player.uid] %>"></label><br>
+    <br>
     <% if (window.Notification && window.Notification.permission != "granted") { %>
-      <button id="asknotifications">Enable Notifications</button>
+      <button class="menu" id="asknotifications">Enable Notifications</button>
     <% } %>
-    <% if (Game.data.RoomState != "Signup") { %>
-      <button id="endgame">End Game</button><br>
+    <% if (RollPoker.IsHost) { %>
+      <button class="menu" id="editsettings">Change Tournament Settings</button>
+      <% if (RollPoker.IsHost == "OWNER") { %>
+        <button class="menu" id="edithosts">Manage Hosts</button>
+      <% } %>
+      <% if (Game.data.RoomState != "Signup") { %>
+        <button class="menu" id="endgame">End Game</button>
+      <% } %>
     <% } %>
+    <div id="dialog">
+    <div id="closedialog">X</div>
+    <div id="dialogcontents"></div>
+    </div>
   </script>
   <script type="text/template" id="tableview">
     <div id="tables">
@@ -108,24 +156,20 @@
       <div id="lower">
         <div id="gamecommands">
           <button id="cmdfold">Fold</button>
-          <button id="cmdcheck">Check</button>
           <button id="cmdcall">Call</button>
           <button id="cmdbet">Bet/Raise</button>
         </div>
+        <div id="indicatorbar" style="display:none;"><tt id="indication"></tt><button id="cancelindicate">(Oops, Cancel)</button></div>
+        <div id="logbet">
         <div id="logscreen"></div>
         <div id="betplaque" class="betplaque">
           <input type="text" id="betval" pattern="\d+" id="raiseval"><br>
-          <button id="subbb">- BB</button> <button id="addbb">+ BB</button><br>
-          <button id="subpot">- Pot</button> <button id="addpot">+ Pot</button><br>
+          <button id="addbb">+ BB</button><br>
+          <button id="subbb">- BB</button>
         </div>
-        <div id="indicatorbar" style="display:none;"><tt id="indication"></tt><button id="cancelindicate">(Oops, Cancel)</button></div>
+        </div>
       </div>
     <% } %>
-  </script>
-  <script type="text/template" id="myhandview">
-    <% _.each(Player.pdata.Cards, function(cardval) { %>
-      <div class="card <%= cardval %>"></div>
-    <% }); %>
   </script>
   <script type="text/template" id="betplaqueview">
     <div id="mybetchips" class="betchips"></div>
@@ -136,48 +180,76 @@
       <button class="bet" name="betadd">+ BB</button>
     </div>
   </script>
+  <script type="text/template" id="playerlistview">
+    <% if (!_.isEmpty(data.Players)) { %>
+      <h3>Players currently signed up for the tournament:</h3>
+      <div id="signups">
+        <% for (var uid in data.Players) { var pl = data.Players[uid]; %>
+        <div class="playerlisting <%= Presences[pl.PlayerId] %>" id="<%= uid %>">
+          <div class="playername">
+            <%= pl.DisplayName %><% if (Player.uid == uid) { %> (You!)<% } %>
+          </div>
+          <% if (pl.PlayerId == Player.uid) { %>
+            <button id="kick" data="<%= pl.PlayerId %>">Unregister</button>
+          <% } else if (RollPoker.IsHost) { %>
+            <button id="kick" data="<%= pl.PlayerId %>">Kick</button>
+          <% } %>
+        </div>
+        <% } %>
+      </div>
+    <% } %>
+  </script>
+  <script type="text/template" id="managehostsview">
+    <% if (Game.data && Game.data.Members && _.keys(Game.data.Members).length > 0) { %>
+      <% _.each(Game.data.Members, function(dname, memberid) { %>
+        <% if (memberid != Player.uid) { %> 
+          <div class="memberhost">
+            <%= dname %>:
+            <% if (Game.data.Hosts[memberid]) { %>
+              Host - <button data="<%= memberid %>" id="demote">Demote</button>
+            <% } else { %>
+              Player - <button data="<%= memberid %>" id="promote">Promote</button>
+            <% } %>
+          </div>
+        <% } %>
+      <% }); %>
+    <% } %>
+  </script>
+  <script type="text/template" id="playerjoinview">
+    <br>
+    <% if (Player.info) { %>
+      You are registered for the upcoming tournament.<br><br>
+      <% if (RollPoker.IsHost && _.keys(data.Players).length > 1) { %>
+        <button id="startgame" class="gamebutton">Start the Tournament with <%= _.keys(data.Players).length %> players!</button>
+      <% } else { %>
+        (Not enough players for a tournament)
+      <% } %>
+    <% } else if (_.any(data.Members)) { %>
+      <form id="signup">
+      <button class="gamebutton">Sign up for the next Tournament</button>
+      </form>
+    <% } else { %>
+      Hello - Only Members of this table (if it exists) may see or join tournaments. Please
+      enter the room password and join!
+      <form id="joingroup">
+      <label>Display Name: <input type="text" name="dispname" id="DisplayName" placeholder="Display Name" value="<%= Player.authuser.displayName %>"></label><br>
+      <label>Room Password: <input type="text" name="roompass" id="RoomPass" placeholder="Game Password" value=""></label><br><br>
+      <button class="gamebutton">Join Group</button>
+      </form>
+    <% } %>
+    <% if (Game.data && Game.data.Members && _.keys(Game.data.Members).length > 0) { %>
+    <br><br>
+      Members of <%= Game.name %>:<br>
+      <%= Render.Members() %>
+    <% } %>
+  </script>
   <script type="text/template" id="joinview">
     <% if (Game.data && Game.data.Members && Game.data.Members[Player.uid]) { %>
       <div class="cardsettings" id="cardsettings"></div>
       <div id="menu"></div>
     <% } %>
-    <% if (!_.isEmpty(data.Players)) { %>
-      <h3>Players currently signed up for the tournament:</h3>
-      <div id="signups">
-        <ul>
-        <% for (var uid in data.Players) { var pl = data.Players[uid]; %>
-          <li id="<%= uid %>">
-          <div class="playername"><%= pl.DisplayName %><% if (Player.uid == uid) { %> (You!)<% } %></div>
-          </li>
-        <% } %>
-        </ul>
-      </div>
-    <% } %>
-    <div class="invites" style="width: 400px; padding: 0.5em; border: 1px solid black;">
-      <br>
-      <% if (Player.info) { %>
-        You are registered for the upcoming tournament.<br><br>
-        <% if (Game.data.Hosts && Game.data.Hosts[Player.uid] && _.keys(data.Players).length > 1) { %>
-        <button id="startgame" class="gamebutton">Start the Tournament with <%= _.keys(data.Players).length %> players!</button>
-        <% } %>
-      <% } else if (_.any(data.Members)) { %>
-        <form id="signup">
-        <button class="gamebutton">Sign up for the next Tournament</button>
-        </form>
-      <% } else { %>
-        Hello - Only Members of this table (if it exists) may see or join tournaments. Please
-        enter the room password and join!
-        <form id="joingroup">
-        <label>Display Name: <input type="text" name="dispname" id="DisplayName" placeholder="Display Name" value="<%= Player.authuser.displayName %>"></label><br>
-        <label>Room Password: <input type="text" name="roompass" id="RoomPass" placeholder="Game Password" value=""></label><br><br>
-        <button class="gamebutton">Join Group</button>
-        </form>
-      <% } %>
-      <% if (Game.data && Game.data.Members && _.keys(Game.data.Members).length > 0) { %>
-      <br><br>
-        Members of <%= Game.name %>:<br>
-        <%= Render.Members() %>
-      <% } %>
+    <div id="playerlist"></div>
+    <div id="invites" style="width: 400px; padding: 0.5em; border: 1px solid black;">
     </div>
   </script>
   <script type="text/template" id="registerview">

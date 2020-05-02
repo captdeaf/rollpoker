@@ -113,7 +113,7 @@ var RollPoker = {
     function bind(ename, name) {
       $(window).on(ename, function(evt) {
         RollPoker.ResetActivity();
-        if (RollPoker.Handler._handleEvent) {
+        if (RollPoker.Handler && RollPoker.Handler._handleEvent) {
           RollPoker.Handler._handleEvent(name, evt);
         }
       });
@@ -157,12 +157,17 @@ var RollPoker = {
       }
     }, 30000)
   },
+  IsHost: false,
   Update: function(doc) {
     Player.state = undefined;
     if (doc.Players) {
       Player.info = doc.Players[Player.uid];
     }
     Game.data = doc;
+    RollPoker.IsHost = false;
+    if (Game.data && Game.data.Hosts && Game.data.Hosts[Player.uid]) {
+      RollPoker.IsHost = Game.data.Hosts[Player.uid];
+    }
     if (Game.LAST_STATE != doc.RoomState) {
       Game.LAST_STATE = doc.RoomState;
       RollPoker.Handler = VIEWS[doc.RoomState];

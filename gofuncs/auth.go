@@ -24,20 +24,28 @@ func GetUserIDFromHeader(req *http.Request) string {
 
 	// 2) Init FBAUTH_CLIENT if it's not already
 	if FBAUTH_CLIENT == nil {
-		var err error
-		_, err = os.Stat("firebase-key.json")
-		if err == nil {
+		_, oserr := os.Stat("firebase-key.json")
+		var clienterr error
+		if oserr == nil {
+			// Localhost
 			opt := option.WithCredentialsFile("firebase-key.json")
-			fbapp, err := firebase.NewApp(ctx, nil, opt)
-			if err != nil { return "" }
-			FBAUTH_CLIENT, err = fbapp.Auth(ctx)
+			fbapp, apperr := firebase.NewApp(ctx, nil, opt)
+			if apperr != nil {
+				panic(fmt.Sprintf("Unable to get NewApp: %v\n", apperr))
+				return ""
+			}
+			FBAUTH_CLIENT, clienterr = fbapp.Auth(ctx)
 		} else {
-			fbapp, err := firebase.NewApp(ctx, nil)
-			if err != nil { return "" }
-			FBAUTH_CLIENT, err = fbapp.Auth(ctx)
+			// Server
+			fbapp, apperr := firebase.NewApp(ctx, nil)
+			if apperr != nil {
+				panic(fmt.Sprintf("Unable to get NewApp: %v\n", apperr))
+				return ""
+			}
+			FBAUTH_CLIENT, clienterr = fbapp.Auth(ctx)
 		}
-		if err != nil || FBAUTH_CLIENT == nil {
-			err = fmt.Errorf("error getting Auth client: %v", err)
+		if clienterr != nil {
+			panic(fmt.Sprintf("Unable to get FBA Client: %v\n", clienterr))
 			return ""
 		}
 	}
@@ -46,7 +54,7 @@ func GetUserIDFromHeader(req *http.Request) string {
 	firebaseToken, err := FBAUTH_CLIENT.VerifyIDTokenAndCheckRevoked(ctx, jwtToken)
 
 	if err != nil {
-		fmt.Errorf("Error w/ token: %v\n", err)
+		fmt.Errorf("Unable to verify Token: %v\n", err)
 		return ""
 	}
 	return firebaseToken.UID

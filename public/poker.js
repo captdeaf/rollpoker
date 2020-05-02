@@ -112,7 +112,6 @@ VIEWS.Poker = new View({
   Templates: {
     Table: "#maintable",
     View: "#tableview",
-    Hand: "#myhandview",
   },
   OnClick: {
     "betadd": function() {
@@ -189,6 +188,7 @@ VIEWS.Poker = new View({
     $('#mytable').empty();
     $('#mytable').append(table);
     if (_.any(Player.info)) {
+      this.UpdateBetButtons();
       if (_.any(Player.pdata.Cards)) {
         if (this.ValueDiffers("hand", Player.pdata.Cards)) {
           this.ClearIndicator();
@@ -231,6 +231,66 @@ VIEWS.Poker = new View({
     }
     return amt;
   },
+  UpdateBetButtons: function(table) {
+    var curbet = Player.Table.CurBet;
+    var minbet = Player.Table.MinBet;
+    var playerbet = Player.info.Bet;
+    var diffbet = curbet - playerbet;
+    var state = Player.info.State;
+    var foldb = $("#cmdfold");
+    var callb = $("#cmdcall");
+    var betb = $("#cmdbet");
+    $("#addbb").text("+ " + minbet);
+    $("#subbb").text("- " + minbet);
+    console.log(minbet, curbet, playerbet, diffbet);
+    if (state == "FOLDED") {
+      // Player's out.
+      foldb.text("Folded");
+      foldb.prop('disabled', true);
+      callb.text("Check");
+      callb.prop('disabled', true);
+      betb.text("Bet");
+      betb.prop('disabled', true);
+      $("#betplaque").find("button").prop('disabled', true);
+      return;
+    } else if (Player.info.Chips < 1) {
+      foldb.text("All-In");
+      foldb.prop('disabled', true);
+      callb.text("All-In");
+      callb.prop('disabled', true);
+      betb.text("All-In");
+      betb.prop('disabled', true);
+      $("#betplaque").find("button").prop('disabled', true);
+    } else {
+      foldb.prop('disabled', false);
+      callb.prop('disabled', false);
+      betb.prop('disabled', false);
+      foldb.text("Fold");
+      if (diffbet > 0) {
+        callb.text("Call");
+      } else {
+        callb.text("Check");
+      }
+      if (curbet > 0) {
+        betb.text("Raise");
+      } else {
+        betb.text("Bet");
+      }
+      $("#betplaque").find("button").prop('disabled', false);
+    }
+    // If Call will put a player all-in, disable bet.
+    if (diffbet >= Player.info.Chips) {
+      betb.prop('disabled', true);
+      $("#betplaque").find("button").prop('disabled', true);
+      callb.text("All-In Call");
+    }
+    if (state != "TURN") {
+      // It's not player's turn: These buttons are for queueing commands.
+      if (diffbet == 0) {
+        foldb.text("Check/Fold");
+      }
+    }
+  },
   WannaBet: function(amt) {
     var maxbet = Player.info.Chips - (Player.Table.CurBet - Player.info.Bet);
     this.Bet = this.GetBetAmount(amt, maxbet);
@@ -238,13 +298,6 @@ VIEWS.Poker = new View({
     if (this.Bet == maxbet) {
       console.log("All In");
       // ALL IN
-      // $("#cmdbet").text("All-In");
-    }
-  },
-  UpdateHand: function(player) {
-    $('#myhand').empty();
-    if (player.Hand.length > 0) {
-      $('#myhand').append($(this.T.Hand({player: player})));
     }
   },
   OnLog: function(message) {

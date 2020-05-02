@@ -19,7 +19,7 @@ case "$1" in
     ;;
   webdeploy)
     # Deploy public/ to firebase
-    firebase deploy
+    firebase deploy --only hosting
     # And deploy gofuncs to gcloud functions
     ;;
   rules)

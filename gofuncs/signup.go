@@ -3,6 +3,58 @@ package rollpoker
 import (
 )
 
+func (player *Player) TryAllUpdateSettings(rdata *RoomData, gc *GameCommand) *CommandResponse {
+	_, has := rdata.Room.Hosts[gc.PlayerId]
+	if !has {
+		return CError("You are not a Host")
+	}
+	rdata.Room.OrigSettings = MakeGameSettings(gc.Args)
+	return CSave()
+}
+
+func (player *Player) TryAllPromote(rdata *RoomData, gc *GameCommand) *CommandResponse {
+	flag, has := rdata.Room.Hosts[gc.PlayerId]
+	if !has || flag != "OWNER" {
+		return CError("You are not the Owner")
+	}
+	pid, has := gc.Args["PlayerId"]
+	if !has { return CError("Unknown Member") }
+	_, has = rdata.Room.Members[pid]
+	if !has { return CError("Unknown Member") }
+	rdata.Room.Hosts[pid] = "HOST"
+	return CSave()
+}
+
+func (player *Player) TryAllDemote(rdata *RoomData, gc *GameCommand) *CommandResponse {
+	flag, has := rdata.Room.Hosts[gc.PlayerId]
+	if !has || flag != "OWNER" {
+		return CError("You are not the Owner")
+	}
+	pid, has := gc.Args["PlayerId"]
+	if !has { return CError("Unknown Member") }
+	_, has = rdata.Room.Members[pid]
+	if !has { return CError("Unknown Member") }
+	delete(rdata.Room.Hosts, pid)
+	return CSave()
+}
+
+func (player *Player) TrySignupKickPlayer(rdata *RoomData, gc *GameCommand) *CommandResponse {
+	pid, has := gc.Args["PlayerId"]
+	if !has { return CError("Unknown Member") }
+	_, has = rdata.Room.Members[pid]
+	if !has { return CError("Unknown Member") }
+	_, has = rdata.Room.Players[pid]
+	if !has { return CError("Not currently signed up") }
+	if (pid != gc.PlayerId) {
+		_, has := rdata.Room.Hosts[gc.PlayerId]
+		if !has {
+			return CError("You are not a Host")
+		}
+	}
+	delete(rdata.Room.Players, pid)
+	return CSave()
+}
+
 func (player *Player) TryAllEndGame(rdata *RoomData, gc *GameCommand) *CommandResponse {
 	_, has := rdata.Room.Hosts[gc.PlayerId]
 	if !has {

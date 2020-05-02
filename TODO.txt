@@ -3,13 +3,12 @@ Suggestions:
 
 BUGS:
 * Queued: Bet, should be Call.
-* On raise, MinBet is set improperly if Player.Bet = 25 and CurBet = 50.
-* MinBet 100 didn't work
+* Double tapping a command fires twice, second one gets an error.
+* UID unknown still happens occasionally.
 
 TODO:
 * Pause blinds
 * Ranking list
-* Menu: Kick Player, add and remove hosts.
 * Cash game support
   * Buyin button
   * Cashout button
@@ -82,3 +81,7 @@ FIXED:
 * Pot of 200 split between two winners says 200
 * Menu: Quit game, return to signup
 * Admin: Add Owner on creation
+* Menu: add and remove hosts.
+* Menu: Kick Player
+* On raise, MinBet is set improperly if Player.Bet = 25 and CurBet = 50.
+* MinBet 100 didn't work

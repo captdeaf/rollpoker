@@ -160,25 +160,8 @@ type GameResponse struct {
 	Name string
 }
 
-func MakeTable(w http.ResponseWriter, r *http.Request) {
-	var uid = GetUserIDFromHeader(r)
-	if uid == "" {
-		http.Error(w, "false", http.StatusBadRequest)
-		return
-	}
-
-	var args map[string]string
-
-	err := json.NewDecoder(r.Body).Decode(&args)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	log.Printf("args: %v\n", args)
-
-	var newgame RoomData
-	var settings GameSettings
+func MakeGameSettings(args map[string]string) *GameSettings {
+	var settings *GameSettings = new(GameSettings)
 
 	settings.GameType = args["GameType"]
 	settings.BetLimit = args["BetLimit"]
@@ -199,11 +182,35 @@ func MakeTable(w http.ResponseWriter, r *http.Request) {
 		settings.BlindTimes[i] = int(t64)
 	}
 
+	return settings
+}
+
+func MakeTable(w http.ResponseWriter, r *http.Request) {
+	var uid = GetUserIDFromHeader(r)
+	if uid == "" {
+		http.Error(w, "false", http.StatusBadRequest)
+		return
+	}
+
+	var args map[string]string
+
+	err := json.NewDecoder(r.Body).Decode(&args)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	settings := MakeGameSettings(args)
+
+	log.Printf("args: %v\n", args)
+
+	var newgame RoomData
+
 	newgame.Name = GenerateName()
 
 	newgame.Room.Tables = make(map[string]*TableState)
 	newgame.Room.RoomState = SIGNUP
-	newgame.Room.OrigSettings = &settings
+	newgame.Room.OrigSettings = settings
 	newgame.Room.Members = make(map[string]string)
 	dname, has := args["DisplayName"]
 	if !has { dname = "Host" }

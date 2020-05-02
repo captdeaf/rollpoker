@@ -476,7 +476,7 @@ func DoBet(game *RoomData, tablename, playerid string, amt int, auto bool) {
 	player.Chips -= amt
 	player.Bet += amt
 	player.TotalBet += amt
-	diff := amt - table.CurBet
+	diff := player.Bet - table.CurBet
 	if diff > table.MinBet {
 		table.MinBet = diff
 	}

@@ -1,12 +1,15 @@
 VIEWS.Signup = new View({
   Templates: {
     View: "#joinview",
+    PlayerList: "#playerlistview",
+    PlayerJoin: "#playerjoinview",
   },
   Start: function() {
     $('body').html(this.T.View({data: {Players: []}}));
   },
   Update: function(state) {
-    $('body').html(this.T.View({data: state}));
+    $('#playerlist').html(this.T.PlayerList({data: state}));
+    $('#invites').html(this.T.PlayerJoin({data: state}));
   },
   OnClick: {
     "startgame": function(evt) {
@@ -20,6 +23,11 @@ VIEWS.Signup = new View({
     "closemenu": function() {
       this.RemoveSubview("#menu");
       $("#menu").hide();
+    },
+    "kick": function(evt) {
+      var pid = evt.target.getAttribute("data");
+      console.log("Kicking " + pid);
+      RollPoker.SendCommand("KickPlayer", {"PlayerId": pid});
     },
   },
   OnSubmit: {

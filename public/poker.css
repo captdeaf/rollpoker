@@ -77,18 +77,10 @@
     -webkit-text-stroke-color: black;
   }
 
-  div.myhand {
-    position: absolute;
-    display: inline-block;
-    padding: 5px;
-    background-color: lightgreen;
-    transform: scale(2.0);
-    transform-origin: 0 0;
-    z-index: 20;
-  }
-
-  div.lower {
+  div#lower {
     position: relative;
+    width: 450px;
+    height: 400px;
   }
 
   div.indicator {
@@ -110,7 +102,7 @@
   div#logscreen {
     display: inline-block;
     overflow-y: scroll;
-    width: 260px;
+    width: 300px;
     height: 140px;
     position: relative;
     left: 20px;
@@ -129,8 +121,23 @@
     appearance: none;
     background-color: lightgray;
   }
-  button:active {
+  button:disabled {
+    background-color: darkgray;
+  }
+  button:enabled:active {
     background-color: gray;
+  }
+  button#cmdfold:enabled:active {
+    background-color: black;
+    transition: all 1.0s ease 0s;
+  }
+  button#cmdcall:enabled:active {
+    background-color: green;
+    transition: all 1.0s ease 0s;
+  }
+  button#cmdbet:enabled:active {
+    background-color: cyan;
+    transition: all 1.0s ease 0s;
   }
   input {
     -webkit-appearance: none;
@@ -138,12 +145,17 @@
     appearance: none;
   }
 
-  div.betplaque {
+  div#logbet {
     position: relative;
-    left: 0px;
-    top: 0px;
-    width: 190px;
+  }
+
+  div.betplaque {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    width: 90px;
     display: inline-block;
+    float: right;
     padding: 5px;
     background-color: #ffddddaa;
     border: 1px solid red;
@@ -153,7 +165,7 @@
   input#betval {
     font-size: 14pt;
     margin-bottom: 5px;
-    width: 180px;
+    width: 70px;
     text-align: right;
   }
 
@@ -224,36 +236,59 @@
     margin-left: -110px;
   }
 
+  div.playerdata.TURN {
+    box-shadow: 0px 0px 40px 40px #9999eedd;
+  }
+
+  div.playerlisting {
+    display: block;
+    position: relative;
+    width: 300px;
+    height: 60px;
+    border-radius: 5px;
+    border: 2px solid black;
+    background-color: gray;
+    margin: 10px;
+  }
+  button#kick {
+    display: block;
+    position: absolute;
+    width: 90px;
+    height: 25px;
+    right: 5px;
+    bottom: 5px;
+  }
+
   div.playerdata {
     display: block;
     position: absolute;
     left: 0px;
     bottom: 0px;
     width: 220px;
-    background-color: #ffff00dd;
+    background-color: #bbbbbbdd;
     border: 3px solid black;
     border-radius: 10px;
-  }
-
-  div.playerdata.TURN {
-    background-color: #ffffffdd;
     color: black;
-  }
-
-  div.playerdata.BET {
-    background-color: #ffaaaadd;
-  }
-
-  div.playerdata.WAITING {
-    background-color: #bbbbbbdd;
-  }
-
-  div.playerdata.ALLIN {
-    background-color: #aa6666dd;
   }
 
   div.playerdata.FOLDED {
     background-color: #666666dd;
+  }
+
+  div.playerdata.Offline {
+    border-color: #ff0000dd;
+  }
+
+  div.playerdata.Active {
+    border-color: #ffffffdd;
+  }
+
+  div.playerdata.Idle {
+    border-color: #0000ffdd;
+  }
+
+  div.playerdata.Asleep {
+    border-color: #990099dd;
   }
 
   img.statusicon {
@@ -352,6 +387,10 @@
     right: 10px;
   }
 
+  div.playerhand.myhand {
+    z-index: 10;
+  }
+
   div.board {
     position: absolute;
     top: 240px;
@@ -391,14 +430,6 @@
     width: 80px;
     z-index: 10;
   }
-  button.addbb {
-    position: relative
-    right: 0px;
-  }
-  button.addpot {
-    position: relative
-    right: 0px;
-  }
 
   div#indicatorbar {
     position: absolute;
@@ -435,18 +466,34 @@
   div#menu {
     position: absolute;
     display: block;
-    top: 20px;
-    left: 20px;
+    top: 15px;
+    left: 15px;
     width: 300px;
     background-color: #000055ee;
     color: white;
     padding: 10px;
-    height: 60px;
     z-index: 200;
     display: none;
   }
   div#closemenu {
     padding-bottom: 10px;
+  }
+
+  div#dialog {
+    display: none;
+    position: absolute;
+    top: 45px;
+    left: 45px;
+    background-color: #333333ff;
+    color: white;
+    z-index: 400;
+  }
+
+  button.menu {
+    width: 100%;
+    padding: 5px;
+    margin-top: 5px;
+    margin-bottom: 5px;
   }
 
   body {

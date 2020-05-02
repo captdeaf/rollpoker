@@ -135,7 +135,7 @@ func init() {
 		{"TexRiver", 0, 1},
 		{"ClearBets", 0, 0},
 		{"BetRound", 0, 0},
-		{"CollectPot", 0, 0},
+		{"CollectPot", 0, 2},
 		{"TexWin", 0, 8},
 		{"BustOut", 0, 0},
 		{"NewGame", 0, 0},
