@@ -130,7 +130,7 @@
   button.hold:enabled:active {
     background-color: black;
     box-shadow: 0px 0px 12px 12px #9999eedd;
-    transition: box-shadow 0s ease 0.5s, background-color 1.0s ease 0s;
+    transition: box-shadow 0s ease 0.3s, background-color 0.4s ease 0s;
   }
   input {
     -webkit-appearance: none;
@@ -434,7 +434,7 @@
     font-weight: bold;
     padding-top: 3em;
     padding-bottom: 3em;
-    top: 380px;
+    top: 0%;
     left: 0%;
     background-color: #666666dd;
     z-index: 100;

@@ -13,13 +13,17 @@ var CommandQueue = {
     if (Player.info.State == "TURN") {
       this.PopCommand();
     } else {
-      VIEWS.Poker.Indicate("Queued: " + cmd, {canCancel: true});
+      if (args && args.amount) {
+        VIEWS.Poker.Indicate("Queued: " + cmd + " " + args.amount, {canCancel: true});
+      } else {
+        VIEWS.Poker.Indicate("Queued: " + cmd, {canCancel: true});
+      }
     }
   },
   MaybeClearQueue: function() {
     // Called on Bets. If we have a queued command that isn't Fold,
     // then cancel it.
-    if (this.QueuedCommand && this.QueuedCommand.cmd != "Fold") {
+    if (this.QueuedCommand && this.QueuedCommand.clearonbet != false) {
       this.Clear();
     }
   },
@@ -27,9 +31,12 @@ var CommandQueue = {
     this.QueuedCommand = undefined;
   },
   PopCommand: function() {
+    this.ClearIndicator();
     var qd = this.QueuedCommand;
     this.QueuedCommand = undefined;
-    RollPoker.SendCommand(qd.cmd, qd.args);
+    if (qd) {
+      RollPoker.SendCommand(qd.cmd, qd.args);
+    }
   },
 };
 
@@ -136,18 +143,17 @@ VIEWS.Poker = new View({
       this.ClearIndicator();
     },
     "cmdfold": function() {
-      if (confirm("Are you sure you want to fold?")) {
-        CommandQueue.Queue("Fold", {});
+      if (Player.info.State == "TURN") {
+        CommandQueue.Queue("Fold", {}, false);
+      } else {
+        CommandQueue.Queue("CheckFold", {}, false);
       }
     },
-    "cmdcheck": function() {
-      CommandQueue.Queue("Check", {});
-    },
     "cmdcall": function() {
-      CommandQueue.Queue("Call", {});
+      CommandQueue.Queue("Call", {}, true);
     },
     "cmdbet": function() {
-      CommandQueue.Queue("Bet", {amount: "" + (this.Bet + (Player.Table.CurBet - Player.info.Bet))});
+      CommandQueue.Queue("Bet", {amount: "" + (this.Bet + (Player.Table.CurBet - Player.info.Bet))}, true);
     },
     "addbb": function() {
       this.WannaBet(this.Bet + Player.Table.Blinds[Player.Table.Blinds.length - 1]);
@@ -231,7 +237,7 @@ VIEWS.Poker = new View({
     }
     return amt;
   },
-  UpdateBetButtons: function(table) {
+  UpdateBetButtons: function() {
     var curbet = Player.Table.CurBet;
     var minbet = Player.Table.MinBet;
     var playerbet = Player.info.Bet;
@@ -244,24 +250,20 @@ VIEWS.Poker = new View({
     $("#subbb").text("- " + minbet);
     console.log(minbet, curbet, playerbet, diffbet);
     if (state == "FOLDED") {
+      $(".gameinput").prop("disabled", true);
       // Player's out.
       foldb.text("Folded");
-      foldb.prop('disabled', true);
       callb.text("Check");
-      callb.prop('disabled', true);
       betb.text("Bet");
-      betb.prop('disabled', true);
       $("#betplaque").find("button").prop('disabled', true);
       return;
     } else if (Player.info.Chips < 1) {
+      $(".gameinput").prop("disabled", true);
       foldb.text("All-In");
-      foldb.prop('disabled', true);
       callb.text("All-In");
-      callb.prop('disabled', true);
       betb.text("All-In");
-      betb.prop('disabled', true);
-      $("#betplaque").find("button").prop('disabled', true);
     } else {
+      $(".gameinput").prop("disabled", false);
       foldb.prop('disabled', false);
       callb.prop('disabled', false);
       betb.prop('disabled', false);
@@ -323,11 +325,13 @@ VIEWS.Poker = new View({
     }
     $("#indication").text(message);
     $("#indicatorbar").show();
+    $(".gameinput").prop("disabled", true);
     this.INDICATING = message;
   },
   ClearIndicator: function() {
     this.INDICATING = undefined;
     $("#indicatorbar").hide();
+    this.UpdateBetButtons();
   },
   OnSecond: function() {
     $("#timeleft").text(Render.TimeLeft());

@@ -145,7 +145,7 @@ var RollPoker = {
           if (evt.target == newevt.target) {
             if ($(evt.target).hasClass("hold")) {
               var now = (new Date().getTime());
-              if ((now - started) > 500) {
+              if ((now - started) > 300) {
                 RollPoker.Handler._handleEvent("Click", newevt);
               }
             } else {

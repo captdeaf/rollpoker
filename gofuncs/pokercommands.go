@@ -129,6 +129,25 @@ func (player *Player) TryPokerFold(rdata *RoomData, gc *GameCommand) *CommandRes
 	return COK()
 }
 
+func (player *Player) TryPokerCheckFold(rdata *RoomData, gc *GameCommand) *CommandResponse {
+	if !IsTurn(player) { return CError("Not your turn") }
+	tablename := rdata.TableForPlayer(player)
+	table := rdata.Room.Tables[tablename]
+
+	remaining := table.CurBet - player.Bet
+	if remaining > 0 {
+		DoFold(rdata, tablename, gc.PlayerId)
+		LogEvent(rdata, "Fold", player.PlayerId, "FOLD")
+		LogMessage(rdata, "%s folds", player.DisplayName)
+		return COK()
+	}
+
+	DoCall(rdata, tablename, gc.PlayerId, 0)
+	LogEvent(rdata, "Call", player.PlayerId, remaining, "CHECK")
+	LogMessage(rdata, "%s checks", player.DisplayName)
+	return COK()
+}
+
 func (player *Player) TryPokerCall(rdata *RoomData, gc *GameCommand) *CommandResponse {
 	if !IsTurn(player) { return CError("Not your turn") }
 	tablename := rdata.TableForPlayer(player)
