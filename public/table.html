@@ -47,11 +47,11 @@
         <% } %>
           <% if (player.PlayerId == Player.uid && Player.pdata) { %>
             <% _.each(Player.pdata.Cards, function(cardval) { %>
-                <div class="card <%= cardval %>"></div>
+                <%= Render.Card(cardval) %>
             <% }); %>
           <% } else { %>
             <% _.each(player.Hand, function(cardval) { %>
-                <div class="card <%= cardval %>"></div>
+                <%= Render.Card(cardval) %>
             <% }); %>
           <% } %>
         </div>
@@ -79,7 +79,7 @@
       <% if (table.Cards && table.Cards.board) { %>
         <div class="board">
         <% _.each(table.Cards.board, function(cardval) { %>
-          <div class="card <%= cardval %>"></div>
+          <%= Render.Card(cardval) %>
         <% }); %>
         </div>
       <% } %>
@@ -148,7 +148,7 @@
     <div id="tables">
       <div id="mytable" class="pokertable"></div>
       <% if (Player.uid) { %>
-      <div class="cardsettings" id="cardsettings"></div>
+      <div class="cardsettings" id="cardsettings">Options</div>
       <div id="menu"></div>
       <% } %>
     </div>

@@ -11,14 +11,23 @@
     z-index: 80;
   }
 
+  div.cardwrap {
+    display: inline-block;
+    height: 90.75px;
+    width: 60.5px;
+  }
+
   div.card {
     display: inline-block;
-    background-image: url('/cards.png');
+    background-image: url('/allcards.png');
+    background-color: white;
     background-repeat: no-repeat;
-    height: 80px;
-    width: 60px;
+    height: 1298px;
+    width: 926px;
     border: 2px solid black;
     border-radius: 8px;
+    transform: scale(0.1);
+    transform-origin: 0 0;
   }
 
   div.hand {
@@ -36,11 +45,13 @@
     position: absolute;
     background-image: url('/cardsettings.png');
     background-repeat: no-repeat;
-    background-size: 40px 40px;
-    top: 10px;
-    left: 10px;
-    height: 40px;
-    width: 40px;
+    background-size: 30px 30px;
+    padding-left: 32px;
+    padding-top: 5px;
+    top: 5px;
+    left: 5px;
+    height: 30px;
+    width: 30px;
   }
 
   div.tableopts {
@@ -77,10 +88,28 @@
     -webkit-text-stroke-color: black;
   }
 
+  .raiseimage {
+    background-size: 120px 40px;
+    width: 120px;
+    height: 40px;
+  }
+  .raiseimage.Allin { background-image: url('/evtAllin.png'); }
+  .raiseimage.Bet { background-image: url('/evtBet.png'); }
+  .raiseimage.Call { background-image: url('/evtCall.png'); }
+  .raiseimage.Check { background-image: url('/evtCheck.png'); }
+  .raiseimage.Folded { background-image: url('/evtFolded.png'); }
+  .raiseimage.Raise {
+    background-size: 115px 60px;
+    width: 115px;
+    height: 60px;
+    background-image: url('/evtRaise.png');
+  }
+
   div#lower {
+    margin-top: 30px;
     position: relative;
     width: 450px;
-    height: 400px;
+    height: 200px;
   }
 
   div.indicator {
@@ -140,6 +169,8 @@
 
   div#logbet {
     position: relative;
+    overflow-y: hidden;
+    height: 160px;
   }
 
   div.betplaque {
@@ -169,20 +200,15 @@
 
   div.bg {
     background-image: url('/cardback1.png');
-    background-size: 60px 80px;
-    background-repeat: repeat;
-    width: 60px;
-    height: 80px;
+    background-repeat: none;
+    background-size: 926px 1298px;
+    height: 1298px;
+    width: 926px;
     display: inline-block;
   }
 
-  div.hand .card {
-    transform: scale(1.2);
-    transform-origin: 0 0;
-  }
-
-  div.hand .card:not(:first-child) {
-    margin-left: -20px;
+  div.hand .cardwrap:not(:first-child) {
+    margin-left: -35px;
   }
 
   div.pilecontainer {
@@ -336,8 +362,8 @@
   tt.betamt {
     display: inline-block;
     position: absolute;
-    top: 50px;
-    left: 10px;
+    top: 10px;
+    left: -40px;
     color: white;
   }
 
@@ -376,7 +402,7 @@
 
   div.playerhand {
     position: absolute;
-    top: -20px;
+    top: -5px;
     right: 10px;
   }
 
@@ -402,12 +428,12 @@
 
   div.pokertable {
     position: relative;
-    height: 600px;
-    width: 1000px;
     background-image: url('/pokertable.png');
-    background-size: 900px 370px;
+    height: 630px;
+    width: 1080px;
+    background-size: 1000px 550px;
     background-repeat: no-repeat;
-    background-position: 50px 130px;
+    background-position: 40px 40px;
     transform-origin: 0 0;
     transform: scale(0.5);
   }
@@ -491,5 +517,6 @@
 
   body {
     background-color: #000022ff;
+    height: 800px;
     color: white;
   }

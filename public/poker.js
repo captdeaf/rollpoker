@@ -31,7 +31,6 @@ var CommandQueue = {
     this.QueuedCommand = undefined;
   },
   PopCommand: function() {
-    this.ClearIndicator();
     var qd = this.QueuedCommand;
     this.QueuedCommand = undefined;
     if (qd) {
@@ -49,6 +48,9 @@ var Render = {
     [1000, "ze"],
     [5000, "zf"],
   ],
+  Card: function(cardval) {
+    return '<div class="cardwrap"><div class="card ' + cardval + '"></div></div>'
+  },
   Members: function() {
     var usernames = _.map(Game.data.Members, function(name, uid) {
       if (Game.data.Hosts[uid]) {
@@ -345,23 +347,27 @@ VIEWS.Poker = new View({
       var off = this.GetPlayerLocation(playerid);
       if (off) {
         if (amt == 0) {
-          Helpers.RaiseText(off, opt);
+          Helpers.RaiseImage(off, "Check");
         } else {
-          Helpers.RaiseText(off, opt + " (" + amt + ")");
+          Helpers.RaiseImage(off, "Call");
         }
       }
     },
     Fold: function(playerid) {
       var off = this.GetPlayerLocation(playerid);
       if (off) {
-        Helpers.RaiseText(off, "Folded");
+        Helpers.RaiseImage(off, "Folded");
       }
     },
     Bet: function(playerid, amt, opt) {
       var off = this.GetPlayerLocation(playerid);
       CommandQueue.MaybeClearQueue();
       if (off) {
-        Helpers.RaiseText(off, opt + " " + amt);
+        if (amt != Player.Table.CurBet) {
+          Helpers.RaiseImage(off, "Raise");
+        } else {
+          Helpers.RaiseImage(off, "Bet");
+        }
       }
     },
     Win: function(playerid, amt, handname, handcards) {
