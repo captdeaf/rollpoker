@@ -164,7 +164,11 @@ func (player *Player) TryPokerCall(rdata *RoomData, gc *GameCommand) *CommandRes
 		LogEvent(rdata, "Call", player.PlayerId, remaining, "CHECK")
 		LogMessage(rdata, "%s checks", player.DisplayName)
 	} else {
-		LogEvent(rdata, "Call", player.PlayerId, remaining, "CALL")
+		if (player.Chips == 0) {
+			LogEvent(rdata, "Call", player.PlayerId, remaining, "ALL-IN")
+		} else {
+			LogEvent(rdata, "Call", player.PlayerId, remaining, "CALL")
+		}
 		LogMessage(rdata, "%s calls for %d", player.DisplayName, remaining)
 	}
 	return COK()

@@ -51,6 +51,12 @@ var Render = {
   Card: function(cardval) {
     return '<div class="cardwrap"><div class="card ' + cardval + '"></div></div>'
   },
+  Chips: function(chips, cls) {
+    if (!cls) {
+      cls = "betchip";
+    }
+    return '<div class="' + cls + '">' + chips + '</div>';
+  },
   Members: function() {
     var usernames = _.map(Game.data.Members, function(name, uid) {
       if (Game.data.Hosts[uid]) {
@@ -346,7 +352,9 @@ VIEWS.Poker = new View({
     Call: function(playerid, amt, opt) {
       var off = this.GetPlayerLocation(playerid);
       if (off) {
-        if (amt == 0) {
+        if (opt == "ALL-IN") {
+          Helpers.RaiseImage(off, "Allin");
+        } else if (amt == 0) {
           Helpers.RaiseImage(off, "Check");
         } else {
           Helpers.RaiseImage(off, "Call");
@@ -363,7 +371,9 @@ VIEWS.Poker = new View({
       var off = this.GetPlayerLocation(playerid);
       CommandQueue.MaybeClearQueue();
       if (off) {
-        if (amt != Player.Table.CurBet) {
+        if (opt == "ALL-IN") {
+          Helpers.RaiseImage(off, "Allin");
+        } else if (amt != Player.Table.CurBet) {
           Helpers.RaiseImage(off, "Raise");
         } else {
           Helpers.RaiseImage(off, "Bet");

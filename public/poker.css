@@ -4,8 +4,8 @@
     background-image: url('/dealerbutton.png');
     background-repeat: no-repeat;
     background-size: 40px 40px;
-    bottom: -30px;
-    left: -20px;
+    top: -5px;
+    left: -10px;
     height: 40px;
     width: 40px;
     z-index: 80;
@@ -26,7 +26,7 @@
     width: 926px;
     border: 2px solid black;
     border-radius: 8px;
-    transform: scale(0.1);
+    transform: scale(0.08);
     transform-origin: 0 0;
   }
 
@@ -193,11 +193,6 @@
     text-align: right;
   }
 
-  div.board {
-    display: block;
-    height: 80px;
-  }
-
   div.bg {
     background-image: url('/cardback1.png');
     background-repeat: none;
@@ -255,8 +250,15 @@
     margin-left: -110px;
   }
 
-  div.playerdata.TURN {
+  div.playerdata {
+    z-index: 10;
+  }
+
+  div.playerdatabg.TURN {
     box-shadow: 0px 0px 40px 40px #9999eedd;
+  }
+  div.myhand {
+    z-index: 5;
   }
 
   div.playerlisting {
@@ -278,12 +280,27 @@
     bottom: 5px;
   }
 
+  div.playerdatabg {
+    z-index: 1;
+    display: block;
+    position: absolute;
+    left: 0px;
+    bottom: 0px;
+    width: 220px;
+    height: 80px;
+    background-color: #bbbbbbdd;
+    border: 3px solid black;
+    border-radius: 10px;
+    color: black;
+  }
+
   div.playerdata {
     display: block;
     position: absolute;
     left: 0px;
     bottom: 0px;
     width: 220px;
+    height: 80px;
     background-color: #bbbbbbdd;
     border: 3px solid black;
     border-radius: 10px;
@@ -345,26 +362,74 @@
     height: 40px;
     width: 220px;
     margin-left: -75px;
-    top: 55%;
-    left: 50%;
+    top: 340px;
+    left: 550px;
   }
 
   div.playerbet {
     position: absolute;
     display: inline-block;
     text-align: right;
-    padding: 5px;
-    height: 40px;
-    width: 220px;
+    padding: 0px;
+    height: 60px;
+    width: 80px;
     margin-left: -75px;
   }
 
-  tt.betamt {
-    display: inline-block;
-    position: absolute;
-    top: 10px;
-    left: -40px;
-    color: white;
+  div.potchip {
+    width: 80px;
+    position: relative;
+    background-image: url('/potchip.png');
+    background-repeat: no-repeat;
+    background-size: 30px 30px;
+    padding-left: 33px;
+    text-align: left;
+    font-size: 20pt;
+    color: gold;
+    font-weight: bold;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+    text-stroke-width: 1px;
+    text-stroke-color: black;
+  }
+
+  div.betchip {
+    width: 80px;
+    position: relative;
+    background-image: url('/betchip.png');
+    background-repeat: no-repeat;
+    background-size: 30px 30px;
+    padding-left: 33px;
+    text-align: left;
+    font-size: 20pt;
+    color: gold;
+    font-weight: bold;
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+    text-stroke-width: 1px;
+    text-stroke-color: black;
+  }
+
+  div.seat4bet div.dealerbutton {
+    left: 85px;
+  }
+
+  div.seat5bet div.dealerbutton {
+    left: 85px;
+  }
+
+  div.seat4bet div.betchip {
+    background-position: 85px 0px;
+    padding-left: 0px;
+    padding-right: 33px;
+    text-align: right;
+  }
+
+  div.seat5bet div.betchip {
+    background-position: 85px 0px;
+    padding-left: 0px;
+    padding-right: 33px;
+    text-align: right;
   }
 
   div.smallpiles {
@@ -402,21 +467,23 @@
 
   div.playerhand {
     position: absolute;
-    top: -5px;
+    top: -10px;
     right: 10px;
   }
 
-  div.playerhand.myhand {
-    z-index: 10;
+  div.board {
+    display: block;
+    height: 80px;
+    position: absolute;
+    top: 265px;
+    left: 480px;
+    transform-origin: 0 0;
+    transform: scale(0.65);
+    margin-left: -120px;
   }
 
-  div.board {
-    position: absolute;
-    top: 240px;
-    left: 500px;
-    transform-origin: 0 0;
-    transform: scale(0.9);
-    margin-left: -120px;
+  div.board .cardwrap:not(:first-child) {
+    margin-left: 35px;
   }
 
   div.playerpiles {

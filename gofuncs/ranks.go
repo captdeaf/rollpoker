@@ -177,7 +177,7 @@ func GetHandValS(cards []*Card) (string, string) {
 
 	// Set of 3?
 	if cards[0].Val == cards[2].Val {
-		return "SET", SET + hexval
+		return "THREE OF A KIND", SET + hexval
 	}
 	// 2 Pair?
 	if cards[2].Val == cards[3].Val { return "TWO PAIR", TWOPAIR + hexval }
