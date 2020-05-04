@@ -2,7 +2,7 @@ var Helpers = {
   RaiseImage: function(offset, cls) {
     var startoff = {
       left: offset.left,
-      top: offset.top + 40,
+      top: offset.top + (40 * RollPoker.Scale),
     }
     var adiv = $("<div>");
     adiv.addClass("eventanim");
@@ -13,9 +13,17 @@ var Helpers = {
     adiv.offset(startoff);
     var newoffset = {
       left: offset.left,
-      top: offset.top - 20,
+      top: offset.top - (20 * RollPoker.Scale),
     }
-    $("#tables").append(adiv);
+    adiv.css({
+      "transform-origin": "0 0",
+      "-webkit-transform": RollPoker.Scales,
+      "-moz-transform": RollPoker.Scales,
+      "-ms-transform": RollPoker.Scales,
+      "-o-transform": RollPoker.Scales,
+      "transform": RollPoker.Scales,
+    });
+    $("body").append(adiv);
     adiv.animate(newoffset, 1200, "swing", function() {
       adiv.remove();
     });
@@ -36,7 +44,7 @@ var Helpers = {
       left: offset.left,
       top: offset.top - 20,
     }
-    $("#tables").append(adiv);
+    $("body").append(adiv);
     adiv.animate(newoffset, 1200, "swing", function() {
       adiv.remove();
     });

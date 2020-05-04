@@ -4,7 +4,15 @@ var CommandQueue = {
       setTimeout(function() { CommandQueue.PopCommand(); }, 1000);
     }
   },
+  LastQueued: 0,
   Queue: function(cmd, args, clearonbet) {
+    var ts = (new Date()).getTime();
+    if ((ts - this.LastQueued) < 500) {
+      // Sometimes touches register as double touches.
+      // So we require a 500ms wait between commands.
+      return;
+    }
+    this.LastQueued = ts;
     this.QueuedCommand = {
       clearonbet: clearonbet,
       cmd: cmd,
@@ -127,6 +135,7 @@ VIEWS.Poker = new View({
   Templates: {
     Table: "#maintable",
     View: "#tableview",
+    AllCards: "#allcardsview",
   },
   OnClick: {
     "betadd": function() {
@@ -195,6 +204,9 @@ VIEWS.Poker = new View({
     }
     CommandQueue.OnTurnStart();
   },
+  UpdateAllCards: function() {
+    $("#allcards").html(this.T.AllCards());
+  },
   Update: function(data) {
     // TODO: Pick my table out from multiple tables.
     Player.Table = data.Tables["table0"];
@@ -202,6 +214,7 @@ VIEWS.Poker = new View({
     $('#mytable').empty();
     $('#mytable').append(table);
     if (_.any(Player.info)) {
+      this.UpdateAllCards();
       this.UpdateBetButtons();
       if (_.any(Player.pdata.Cards)) {
         if (this.ValueDiffers("hand", Player.pdata.Cards)) {
@@ -216,11 +229,9 @@ VIEWS.Poker = new View({
         if (this.ValueDiffers("minbet", Player.Table.MinBet)) {
           this.WannaBet(Player.Table.MinBet);
         }
-        $('#myhand').show();
         $('#betplaque').show();
       } else {
         // I folded or busted out.
-        $('#myhand').hide();
         $('#betplaque').hide();
       }
     }

@@ -106,10 +106,11 @@
   }
 
   div#lower {
-    margin-top: 30px;
+    display: inline-block;
     position: relative;
-    width: 450px;
-    height: 200px;
+    margin-top: 30px;
+    width: 580px;
+    height: 300px;
   }
 
   div.indicator {
@@ -131,13 +132,13 @@
   div#logscreen {
     display: inline-block;
     overflow-y: scroll;
-    width: 300px;
-    height: 140px;
+    width: 400px;
+    height: 240px;
     position: relative;
     left: 20px;
     top: 20px;
     color: white;
-    font-size: 12px;
+    font-size: 18px;
   }
   #logscreen p {
     display: block;
@@ -156,6 +157,14 @@
   button:enabled:active {
     background-color: gray;
   }
+  button.hold {
+    -webkit-touch-callout: none;
+      -webkit-user-select: none;
+       -khtml-user-select: none;
+         -moz-user-select: none;
+          -ms-user-select: none;
+              user-select: none;
+  }
   button.hold:enabled:active {
     background-color: black;
     box-shadow: 0px 0px 12px 12px #9999eedd;
@@ -170,7 +179,7 @@
   div#logbet {
     position: relative;
     overflow-y: hidden;
-    height: 160px;
+    height: 260px;
   }
 
   div.betplaque {
@@ -200,6 +209,17 @@
     height: 258.8px;
     width: 185.2px;
     display: inline-block;
+  }
+
+  div#allcards .cardwrap {
+    margin-left: 15px;
+  }
+
+  div#allcards {
+    margin-top: 10px;
+    height: 100px;
+    transform: scale(0.8);
+    transform-origin: 0 0;
   }
 
   div.hand .cardwrap:not(:first-child) {
@@ -481,7 +501,7 @@
     left: 480px;
     transform-origin: 0 0;
     transform: scale(0.65);
-    margin-left: -120px;
+    margin-left: -100px;
   }
 
   div.board .cardwrap:not(:first-child) {
@@ -508,8 +528,10 @@
   }
   
   div#tables {
+    vertical-align: top;
+    display: inline-block;
     height: 290px;
-    width: 400px;
+    width: 580px;
   }
 
   div.betplaque button {
@@ -586,12 +608,10 @@
 
   body {
     background-color: #000022ff;
-    height: 600px;
     color: white;
   }
 
   div#sizer {
+    width: 1280px;
     transform-origin: 0 0;
-    width: 590px;
-    height: 600px;
   }

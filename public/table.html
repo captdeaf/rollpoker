@@ -25,6 +25,23 @@
   <script type="text/template" id="adminlogin">
     <input type="text" name="adminpw" placeholder="Admin Password">
   </script>
+  <script type="text/template" id="allcardsview">
+    <% _.each(Player.pdata.Cards, function(cardval) { %>
+      <%= Render.Card(cardval) %>
+    <% }); %>&nbsp;&nbsp;&nbsp;&nbsp;
+    <% if (Player.Table.Cards && Player.Table.Cards.board) { %>
+      <% _.each(Player.Table.Cards.board, function(cardval) { %>
+        <%= Render.Card(cardval) %>
+      <% }); %>
+      <% for (var b = Player.Table.Cards.board.length; b < 5; b++) { %>
+        <%= Render.Card("bg") %>
+      <% } %>
+    <% } else {%>
+      <% for (var b = 0; b < 5; b++) { %>
+        <%= Render.Card("bg") %>
+      <% } %>
+    <% } %>
+  </script>
   <script type="text/template" id="maintable">
       <div class="tableopts" id="tableopts">
         <% if (game.CurrentBlinds) { %>
@@ -158,6 +175,7 @@
     </div>
     <% if (Player.uid && Player.state != "BUSTED") { %>
       <div id="lower">
+        <div id="allcards"></div>
         <div id="gamecommands">
           <button id="cmdfold" class="hold gameinput">Fold</button>
           <button id="cmdcall" class="gameinput">Call</button>

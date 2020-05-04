@@ -44,19 +44,33 @@ var RollPoker = {
       }
     });
   },
+  Scale: 1.0,
+  Scales: "scale(1.0)",
   Resize: function() {
-    var wantedWidth = 590;
-    var maxWidth = $(window).width();
-    var scale = (Math.floor((maxWidth * 100)/ wantedWidth)) / 100;
-    if (scale > 1.0) scale = 1.0;
-    var scales = "scale(" + scale + ")";
-    console.log(scales);
+    // Portrait and Landscape.
+    var win = $(window);
+    var rWidth = 600;
+    if (win.width() < win.height()) {
+      // Portrait, we make width fit.
+      var wantedWidth = 590;
+      var maxWidth = $(window).width();
+      RollPoker.Scale = (Math.floor((maxWidth * 100)/ wantedWidth)) / 100;
+    } else {
+      // Landscape, we need to fit width to 1/2 the width
+      rWidth = 1200;
+      var wantedWidth = 590;
+      var maxWidth = $(window).width() / 2;
+      RollPoker.Scale = (Math.floor((maxWidth * 100)/ wantedWidth)) / 100;
+    }
+    if (RollPoker.Scale > 1.0) RollPoker.Scale = 1.0;
+    RollPoker.Scales = "scale(" + RollPoker.Scale + ")";
     $("#sizer").css({
-      "-webkit-transform": scales,
-      "-moz-transform": scales,
-      "-ms-transform": scales,
-      "-o-transform": scales,
-      "transform": scales,
+      "-webkit-transform": RollPoker.Scales,
+      "-moz-transform": RollPoker.Scales,
+      "-ms-transform": RollPoker.Scales,
+      "-o-transform": RollPoker.Scales,
+      "transform": RollPoker.Scales,
+      "width": rWidth,
     });
   },
   Setup: function() {
