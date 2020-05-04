@@ -44,6 +44,21 @@ var RollPoker = {
       }
     });
   },
+  Resize: function() {
+    var wantedWidth = 590;
+    var maxWidth = $(window).width();
+    var scale = (Math.floor((maxWidth * 100)/ wantedWidth)) / 100;
+    if (scale > 1.0) scale = 1.0;
+    var scales = "scale(" + scale + ")";
+    console.log(scales);
+    $("#sizer").css({
+      "-webkit-transform": scales,
+      "-moz-transform": scales,
+      "-ms-transform": scales,
+      "-o-transform": scales,
+      "transform": scales,
+    });
+  },
   Setup: function() {
     // First make sure we have our game name.
     var m = document.location.pathname.match(/table\/(\w+)$/);
@@ -215,6 +230,13 @@ var RollPoker = {
     if (RollPoker.Handler) {
       RollPoker.Handler.Update(doc);
     }
+    if (doc.LastLogs) {
+      if (RollPoker.RunLogs) {
+        RollPoker.ProcessLogs([doc.LastLogs], true);
+      } else {
+        RollPoker.BackLog.push(doc.LastLogs);
+      }
+    }
   },
   SendCommand: function(command, args, onsucc) {
     var params = {
@@ -266,11 +288,14 @@ var RollPoker = {
 
     var logref = RollPoker.DB.collection("/games/" + Game.name + "/log")
     logref.orderBy("Timestamp", "desc").limit(30).get().then(function(logs) {
-      RollPoker.ProcessLogs(logs, false);
-      // Then start a tail.
-      Game.watchers.logs = logref.orderBy("Timestamp", "desc").limit(1).onSnapshot(function(logs) {
-        RollPoker.ProcessLogs(logs, true);
+      // We get them in an ordered descent. Reverse 'em and convert to data.
+      var revlogs = [];
+      logs.forEach(function(log) {
+        revlogs.push(log.data());
       });
+      RollPoker.ProcessLogs(revlogs, false);
+      RollPoker.RunLogs = true;
+      RollPoker.ProcessLogs(RollPoker.BackLog, true);
     });
   },
   LATEST_SEEN: 0,
@@ -279,14 +304,11 @@ var RollPoker = {
       RollPoker.Handler.OnLog(log.Message);
     }
   },
+  RunLogs: false,
+  BackLog: [],
   ProcessLogs: function(logs, doevents) {
-    // We get them in an ordered descent. Reverse 'em.
-    var rev = [];
-    logs.forEach(function(log) {
-      rev.push(log.data());
-    });
-    for (var i = rev.length - 1; i >= 0; i--) {
-      var litems = rev[i];
+    for (var i = logs.length - 1; i >= 0; i--) {
+      var litems = logs[i];
       if (RollPoker.LATEST_SEEN < litems.Timestamp) {
         if (litems.Logs) {
           RollPoker.LATEST_SEEN = litems.Timestamp;
@@ -311,4 +333,6 @@ $(document).ready(function() {
   RollPoker.Auth(function() {
     RollPoker.Setup();
   });
+  RollPoker.Resize();
+  $(window).resize(RollPoker.Resize);
 });

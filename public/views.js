@@ -8,12 +8,19 @@ function View(attrs) {
   this._subviews = [];
 };
 
+View.MakeTemplate = function(elid) {
+  var tpl = _.template($(elid).html());
+  return function(args) {
+    return tpl(args).replace(/\s+</g,'<').replace(/>\s+/g,'>');
+  }
+};
+
 View.prototype.init = function() {
   this.Cache = {};
   if (this.Templates) {
     this.T = {};
     for (var tplname in this.Templates) {
-      this.T[tplname] = _.template($(this.Templates[tplname]).html());
+      this.T[tplname] = View.MakeTemplate(this.Templates[tplname]);
     }
   }
 };

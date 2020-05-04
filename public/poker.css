@@ -22,11 +22,11 @@
     background-image: url('/allcards.png');
     background-color: white;
     background-repeat: no-repeat;
-    height: 1298px;
-    width: 926px;
+    height: 258.8px;
+    width: 185.2px;
     border: 2px solid black;
     border-radius: 8px;
-    transform: scale(0.08);
+    transform: scale(0.4);
     transform-origin: 0 0;
   }
 
@@ -196,9 +196,9 @@
   div.bg {
     background-image: url('/cardback1.png');
     background-repeat: none;
-    background-size: 926px 1298px;
-    height: 1298px;
-    width: 926px;
+    background-size: 185.2px 258.8px;
+    height: 258.8px;
+    width: 185.2px;
     display: inline-block;
   }
 
@@ -469,6 +469,8 @@
     position: absolute;
     top: -10px;
     right: 10px;
+    width: 100px;
+    height: 100px;
   }
 
   div.board {
@@ -584,6 +586,12 @@
 
   body {
     background-color: #000022ff;
-    height: 800px;
+    height: 600px;
     color: white;
+  }
+
+  div#sizer {
+    transform-origin: 0 0;
+    width: 590px;
+    height: 600px;
   }

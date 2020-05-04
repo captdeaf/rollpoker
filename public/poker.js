@@ -182,7 +182,7 @@ VIEWS.Poker = new View({
     }
   },
   Start: function() {
-    $('body').html(this.T.View());
+    $('#sizer').html(this.T.View());
   },
   OnTurnStart: function() {
     if (window.Notification && window.Notification.permission == "granted") {

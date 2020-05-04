@@ -56,6 +56,7 @@ type TableState struct {
 
 type GameRoom struct {
 	RoomState	string	// "SIGNUP" "POKER"
+	LastLogs	*LogItems // Last logs
 	GameSettings	*GameSettings
 	OrigSettings	*GameSettings
 	Tables		map[string]*TableState	// table0: ...
@@ -300,6 +301,7 @@ func SaveGame(game *RoomData, tx *firestore.Transaction) {
 	if len(game.Logs) > 0 {
 		litems := new(LogItems)
 		litems.Timestamp = time.Now().UnixNano()
+		game.Room.LastLogs = litems
 		litems.Logs = &game.Logs
 
 		lname := fmt.Sprintf("games/%s/log/%d", game.Name, litems.Timestamp)
@@ -309,6 +311,8 @@ func SaveGame(game *RoomData, tx *firestore.Transaction) {
 			log.Printf("Error saving Log Items: %v\n", err)
 			return
 		}
+	} else {
+		game.Room.LastLogs = nil
 	}
 	for _, dref := range game.Drefs {
 		if dref.Changed {

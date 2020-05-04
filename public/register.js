@@ -5,7 +5,7 @@ VIEWS.Register = new View({
   Start: function() {
     this.init();
     this.UI = new firebaseui.auth.AuthUI(firebase.auth());
-    $('body').html(this.T.View({data: {Players: []}}));
+    $('#sizer').html(this.T.View({data: {Players: []}}));
     this.UI.start("#firebase-register", {
       signInOptions: [
         {
