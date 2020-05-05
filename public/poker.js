@@ -5,7 +5,7 @@ var CommandQueue = {
     }
   },
   LastQueued: 0,
-  Queue: function(cmd, args, clearonbet) {
+  Queue: function(disp, opts, func) {
     var ts = (new Date()).getTime();
     if ((ts - this.LastQueued) < 500) {
       // Sometimes touches register as double touches.
@@ -14,18 +14,15 @@ var CommandQueue = {
     }
     this.LastQueued = ts;
     this.QueuedCommand = {
-      clearonbet: clearonbet,
-      cmd: cmd,
-      args: args,
+      clearonbet: opts.clearonbet,
+      disp: disp,
+      opts: opts,
+      func: func,
     };
     if (Player.info.State == "TURN") {
       this.PopCommand();
     } else {
-      if (args && args.amount) {
-        VIEWS.Poker.Indicate("Queued: " + cmd + " " + args.amount, {canCancel: true});
-      } else {
-        VIEWS.Poker.Indicate("Queued: " + cmd, {canCancel: true});
-      }
+      VIEWS.Poker.Indicate(disp, {canCancel: true});
     }
   },
   MaybeClearQueue: function() {
@@ -42,7 +39,7 @@ var CommandQueue = {
     var qd = this.QueuedCommand;
     this.QueuedCommand = undefined;
     if (qd) {
-      RollPoker.SendCommand(qd.cmd, qd.args);
+      qd.func();
     }
   },
 };
@@ -161,16 +158,53 @@ VIEWS.Poker = new View({
     },
     "cmdfold": function() {
       if (Player.info.State == "TURN") {
-        CommandQueue.Queue("Fold", {}, false);
+        RollPoker.LocalEvent("Fold", [Player.uid, "FOLD"]);
+        RollPoker.SendCommand("Fold", {});
       } else {
-        CommandQueue.Queue("CheckFold", {}, false);
+        CommandQueue.Queue("Check/Fold", {clearonbet: false}, function() {
+          if (Player.info.Bet < Player.Table.CurBet) {
+            RollPoker.LocalEvent("Fold", [Player.uid, "FOLD"]);
+            RollPoker.SendCommand("Fold", {});
+          } else {
+            RollPoker.LocalEvent("Call", [Player.uid, 0, "CHECK"]);
+            RollPoker.SendCommand("Check", {});
+          }
+        });
       }
     },
     "cmdcall": function() {
-      CommandQueue.Queue("Call", {}, true);
+      var amt = Player.Table.CurBet - Player.info.Bet;
+      if (amt == 0) {
+        CommandQueue.Queue("Check", {clearonbet: true}, function() {
+          RollPoker.LocalEvent("Call", [Player.uid, 0, "CHECK"]);
+          RollPoker.SendCommand("Check", {});
+        });
+      } else {
+        var msg = "CALL";
+        if (amt == Player.info.Chips) {
+          msg = "ALL-IN";
+        }
+        CommandQueue.Queue("Check", {clearonbet: true}, function() {
+          RollPoker.LocalEvent("Call", [Player.uid, amt, msg]);
+          RollPoker.SendCommand("Call", {amount: "" + amt});
+        });
+      }
     },
     "cmdbet": function() {
-      CommandQueue.Queue("Bet", {amount: "" + (this.Bet + (Player.Table.CurBet - Player.info.Bet))}, true);
+      var amount =  this.Bet + (Player.Table.CurBet - Player.info.Bet);
+
+      var msg = "BET";
+      if (Player.Table.CurBet > 0) {
+        msg = "RAISE";
+      }
+      if (amount == Player.info.Chips) {
+        msg = "ALL-IN";
+      }
+      var bet = this.Bet;
+      CommandQueue.Queue("Bet " + this.Bet, {clearonbet: true}, function() {
+        RollPoker.LocalEvent("Bet", [Player.uid, bet, msg]);
+        RollPoker.SendCommand("Bet", {amount: "" + amount});
+      });
     },
     "addbb": function() {
       this.WannaBet(this.Bet + Player.Table.Blinds[Player.Table.Blinds.length - 1]);
@@ -267,7 +301,6 @@ VIEWS.Poker = new View({
     var betb = $("#cmdbet");
     $("#addbb").text("+ " + minbet);
     $("#subbb").text("- " + minbet);
-    console.log(minbet, curbet, playerbet, diffbet);
     if (state == "FOLDED") {
       $(".gameinput").prop("disabled", true);
       // Player's out.
@@ -275,6 +308,7 @@ VIEWS.Poker = new View({
       callb.text("Check");
       betb.text("Bet");
       $("#betplaque").find("button").prop('disabled', true);
+      this.Indicate("FOLDED", false);
       return;
     } else if (Player.info.Chips < 1) {
       $(".gameinput").prop("disabled", true);
@@ -384,6 +418,9 @@ VIEWS.Poker = new View({
       if (off) {
         if (opt == "ALL-IN") {
           Helpers.RaiseImage(off, "Allin");
+        } else if (0 == Player.Table.CurBet) {
+          // Local Event trigger: CurBet isn't yet set
+          Helpers.RaiseImage(off, "Bet");
         } else if (amt != Player.Table.CurBet) {
           Helpers.RaiseImage(off, "Raise");
         } else {
@@ -398,8 +435,4 @@ VIEWS.Poker = new View({
       }
     }
   },
-  RaiseTextFor: function(playerid, text, cls) {
-    var off = this.GetPlayerLocation(playerid);
-    Helpers.RaiseText(off, text, cls);
-  }
 });

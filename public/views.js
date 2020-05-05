@@ -62,7 +62,28 @@ View.prototype._handleEvent = function(name, evt) {
   }
 };
 
-View.prototype._gameEvent = function(name, args) {
+View.prototype.LocalEvent = function(name, args) {
+  this._expectedEvent = [name, args];
+  if (this.OnEvent[name]) {
+    console.log("Local event triggered");
+    this.OnEvent[name].apply(this, args);
+  } else {
+    console.log("No Events[" + name + "]!");
+  }
+}
+
+View.prototype.TriggerEvent = function(name, args) {
+  if (this._expectedEvent) {
+    if (name == this._expectedEvent[0] && _.isEqual(args, this._expectedEvent[1])) {
+      this._expectedEvent = undefined;
+      return;
+    } else {
+      console.log("Oops, Remote event doesn't equal Local");
+      console.log(this._expectedEvent);
+      console.log([name, args]);
+      this._expectedEvent = undefined;
+    }
+  }
   if (this.OnEvent[name]) {
     this.OnEvent[name].apply(this, args);
   } else {
