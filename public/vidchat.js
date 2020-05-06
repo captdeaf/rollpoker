@@ -83,11 +83,21 @@ var VidChat = {
     var uid = peerid;
     var m = peerid.match(/^rpkr(.*)/);
     if (m) { uid = m[1]; } else { return; }
-    var off = $("#" + uid).offset();
+    var placeholder = $("#vid-" + uid);
     // TODO: Enable videos in signup, too, as well as spectators.
-    if (off) {
-      VidChat.Vids[peerid].css({"position": "absolute"});
-      VidChat.Vids[peerid].offset(off);
+    if (placeholder.length > 0) {
+      var off = placeholder.offset();
+      var bbox = placeholder[0].getBoundingClientRect();
+      var vidstyle = {
+        "position": "absolute",
+        "left": bbox.left-1, // Border
+        "top": bbox.top,
+        "width": bbox.width,
+        "height": bbox.height,
+      };
+      console.log(vidstyle);
+      console.log(bbox);
+      VidChat.Vids[peerid].css(vidstyle);
     }
   },
   ConnectStream: function(stream, peerid) {

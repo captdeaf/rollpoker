@@ -24,9 +24,6 @@
     <script type="text/javascript" src="/poker.js"></script>
     <script type="text/javascript" src="/vidchat.js"></script>
   </head>
-  <script type="text/template" id="adminlogin">
-    <input type="text" name="adminpw" placeholder="Admin Password">
-  </script>
   <script type="text/template" id="allcardsview">
     <% _.each(Player.pdata.Cards, function(cardval) { %>
       <%= Render.Card(cardval) %>
@@ -58,42 +55,21 @@
           <% } %>
         <% } %>
       </div>
-    <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
+    <% for (var seat in {seat0:1,seat1:1,seat2:1,seat3:1,seat4:1,seat5:1,seat6:1,seat7:1,seat8:1,seat9:1}) { var player = players[table.Seats["seat2"]]; %>
       <div id="<%= player.PlayerId %>" class="playerinfo <%= seat %> <%= player.State %>">
-        <% if (player.PlayerId == Player.uid && Player.pdata) { %>
-          <div class="playerhand hand myhand">
-        <% } else { %>
-          <div class="playerhand hand">
-        <% } %>
-          <% if (player.PlayerId == Player.uid && Player.pdata) { %>
-            <% _.each(Player.pdata.Cards, function(cardval) { %>
-                <%= Render.Card(cardval) %>
-            <% }); %>
-          <% } else { %>
-            <% _.each(player.Hand, function(cardval) { %>
-                <%= Render.Card(cardval) %>
-            <% }); %>
-          <% } %>
-        </div>
-        <div class="playerdatabg <%= player.State %> <%= Presences[player.PlayerId] %>"></div>
-        <div class="playerdata <%= player.State %> <%= Presences[player.PlayerId] %>">
-        <div class="playername">
-          <%= player.DisplayName %>
-        </div>
-        <div class="playerstate">
-          <%= player.DisplayState %>
-          <tt class="cash"><%= player.Chips %></tt>
-        </div>
-        </div>
+        <div class="playername"><%= player.DisplayName %></div>
+        <div class="playerimage" id="vid-<%= player.PlayerId %>"></div>
+        <div class="cash"><%= Render.Commas(player.Chips) %></div>
       </div>
-      <% if (seat == table.Dealer || player.Bet > 0) { %>
-        <div class="<%= seat %>bet playerbet">
+      <div class="<%= seat %>bet playerbet">
+        <% if (player.Bet > 0) { %>
+        <div class="betamt"><%= Render.Chips(player.Bet) %></div>
+        <% } %>
         <% if (seat == table.Dealer) { %>
           <div class="dealerbutton"></div>
         <% } %>
-        <%= Render.Chips(player.Bet) %>
-        </div>
-      <% } %>
+        <%= player.DisplayState %>
+      </div>
     <% } %>
     <% if (table) { %>
       <% if (table.Pot > 0) { %>

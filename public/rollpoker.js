@@ -216,7 +216,7 @@ var RollPoker = {
         RollPoker.Handler.init();
         RollPoker.Handler.Start();
         VidChat.Update();
-        setTimeout(VidChat.Update, 1000);
+        setTimeout(VidChat.Update, 500);
       }
     }
     if (RollPoker.Handler) {

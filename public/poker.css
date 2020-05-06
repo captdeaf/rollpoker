@@ -263,11 +263,16 @@
   }
 
   div.playerinfo {
-    position: absolute;
-    display: inline-block;
-    width: 220px;
-    height: 130px;
+    width: 240px;
+    height: 240px;
     margin-left: -110px;
+
+    display: block;
+    position: absolute;
+    background-color: #bbbbbbdd;
+    border: 3px solid black;
+    border-radius: 10px;
+    color: black;
   }
 
   div.playerdata {
@@ -356,21 +361,24 @@
   }
 
   div.playername {
+    text-transform: uppercase;
     padding: 5pt;
-    font-size: 120%;
+    font-size: 20pt;
     font-weight: bold;
     height: 24px;
+    display: block;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 180px
   }
-  tt.cash {
-    position: absolute;
-    right: 5px;
-    bottom: 5px;
+  div.cash {
+    display: inline-block;
+    width: 220px;
+    text-align: right;
+    padding-top: 5px;
     font-weight: bold;
-    font-size: 20px;
+    font-size: 20pt;
     color: darkred;
   }
 
@@ -389,11 +397,13 @@
   div.playerbet {
     position: absolute;
     display: inline-block;
-    text-align: right;
     padding: 0px;
     height: 60px;
-    width: 80px;
+    width: 120px;
     margin-left: -75px;
+    text-align: left;
+    font-size: 18pt;
+    font-weight: bold;
   }
 
   div.potchip {
@@ -497,7 +507,7 @@
     display: block;
     height: 80px;
     position: absolute;
-    top: 265px;
+    top: 485px;
     left: 480px;
     transform-origin: 0 0;
     transform: scale(0.65);
@@ -518,9 +528,9 @@
   div.pokertable {
     position: relative;
     background-image: url('/pokertable.png');
-    height: 630px;
+    height: 1080px;
     width: 1080px;
-    background-size: 1000px 550px;
+    background-size: 1000px 1000px;
     background-repeat: no-repeat;
     background-position: 40px 40px;
     transform-origin: 0 0;
@@ -606,11 +616,16 @@
     margin-bottom: 5px;
   }
 
+  .playerimage {
+    width: 240px;
+    height: 160px;
+    display: inline-block;
+  }
+
   .playercamera {
-    max-width: 100px;
-    max-height: 100px;
-    display: block;
-    border-radius: 8px;
+    background-color: black;
+    display: inline-block;
+    border: 1px solid black;
   }
 
   body {

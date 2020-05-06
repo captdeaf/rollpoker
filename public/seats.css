@@ -13,13 +13,13 @@
 /* Left side */
 .seat9 {top: 52%; left: 15%;}
 
-.seat1bet {top: 185px; left: 405px;}
-.seat2bet {top: 185px; left: 540px;}
-.seat3bet {top: 185px; left: 745px;}
-.seat4bet {top: 255px; left: 750px;}
-.seat5bet {top: 360px; left: 750px;}
-.seat6bet {top: 418px; left: 745px;}
-.seat7bet {top: 418px; left: 540px;}
-.seat8bet {top: 418px; left: 405px;}
-.seat9bet {top: 360px; left: 365px;}
-.seat0bet {top: 255px; left: 365px;}
+.seat1bet {top: 317px; left: 405px;}
+.seat2bet {top: 317px; left: 540px;}
+.seat3bet {top: 317px; left: 745px;}
+.seat4bet {top: 437px; left: 750px;}
+.seat5bet {top: 617px; left: 750px;}
+.seat6bet {top: 716px; left: 745px;}
+.seat7bet {top: 716px; left: 540px;}
+.seat8bet {top: 716px; left: 405px;}
+.seat9bet {top: 617px; left: 385px;}
+.seat0bet {top: 437px; left: 385px;}

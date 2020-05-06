@@ -45,6 +45,9 @@ var CommandQueue = {
 };
 
 var Render = {
+  Commas: function(val) {
+    return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  },
   CHIP_VALUES: [
     [1, "za"],
     [25, "zb"],
@@ -57,6 +60,7 @@ var Render = {
     return '<div class="cardwrap"><div class="card ' + cardval + '"></div></div>'
   },
   Chips: function(chips, cls) {
+    return chips;
     if (!cls) {
       cls = "betchip";
     }
