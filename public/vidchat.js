@@ -24,7 +24,7 @@ var VidChat = {
     var opts = {audio: true, video: {width: 120, height: 120}};
     var callback = function(stream) {
       VidChat.UserStream = stream;
-      VidChat.ConnectStream(VidChat.UserStream, "rpkr" + Player.uid);
+      VidChat.ConnectStream(VidChat.UserStream, "rpkr" + Player.uid, true);
       VidChat.Listen();
     };
     var errback = function() {
@@ -100,7 +100,7 @@ var VidChat = {
       VidChat.Vids[peerid].css(vidstyle);
     }
   },
-  ConnectStream: function(stream, peerid) {
+  ConnectStream: function(stream, peerid, mute) {
     if (VidChat.Vids[peerid]) { return; }
     VidChat.Vids[peerid] = $('<video id="' + peerid + '" class="playercamera">');
     var vid = VidChat.Vids[peerid][0];
@@ -110,6 +110,9 @@ var VidChat = {
     } else {
       vid.src = window.URL.createObjectURL(stream);
       vid.play();
+    }
+    if (mute) {
+      vid.muted = true;
     }
     VidChat.MoveVideo(vid, peerid);
     $('body').append(VidChat.Vids[peerid]);

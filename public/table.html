@@ -55,20 +55,31 @@
           <% } %>
         <% } %>
       </div>
-    <% for (var seat in {seat0:1,seat1:1,seat2:1,seat3:1,seat4:1,seat5:1,seat6:1,seat7:1,seat8:1,seat9:1}) { var player = players[table.Seats["seat2"]]; %>
+    <% for (var seat in table.Seats) { var player = players[table.Seats[seat]]; %>
       <div id="<%= player.PlayerId %>" class="playerinfo <%= seat %> <%= player.State %>">
         <div class="playername"><%= player.DisplayName %></div>
         <div class="playerimage" id="vid-<%= player.PlayerId %>"></div>
-        <div class="cash"><%= Render.Commas(player.Chips) %></div>
+        <div class="cash"><%= Render.Commas(123456) %><div class="stackchip"></div></div>
       </div>
       <div class="<%= seat %>bet playerbet">
+        <%= player.DisplayState %>
+        <div class="pbcards">
+           <% if (player.PlayerId == Player.uid && Player.pdata) { %>
+            <% _.each(Player.pdata.Cards, function(cardval) { %>
+              <%= Render.Card(cardval) %>
+            <% }); %>
+          <% } else { %>
+            <% _.each(player.Hand, function(cardval) { %>
+              <%= Render.Card(cardval) %>
+            <% }); %>
+          <% } %>
+        </div>
         <% if (player.Bet > 0) { %>
-        <div class="betamt"><%= Render.Chips(player.Bet) %></div>
+        <div class="betamt"><%= Render.Chips(123456) %></div>
         <% } %>
-        <% if (seat == table.Dealer) { %>
+        <% if (true || seat == table.Dealer) { %>
           <div class="dealerbutton"></div>
         <% } %>
-        <%= player.DisplayState %>
       </div>
     <% } %>
     <% if (table) { %>

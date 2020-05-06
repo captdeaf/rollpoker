@@ -4,8 +4,8 @@
     background-image: url('/dealerbutton.png');
     background-repeat: no-repeat;
     background-size: 40px 40px;
-    top: -5px;
-    left: -10px;
+    right: -10px;
+    bottom: 10px;
     height: 40px;
     width: 40px;
     z-index: 80;
@@ -263,23 +263,38 @@
   }
 
   div.playerinfo {
-    width: 240px;
-    height: 240px;
+    width: 330px;
     margin-left: -110px;
 
     display: block;
     position: absolute;
-    background-color: #bbbbbbdd;
+    background-color: #999999ee;
     border: 3px solid black;
     border-radius: 10px;
     color: black;
+  }
+
+  .playerimage {
+    position: relative;
+    top: 0px;
+    width: 280px;
+    height: 200px;
+    display: inline-block;
+  }
+
+  .playercamera {
+    background-color: black;
+    max-width: 340px;
+    max-height: 260px;
+    display: inline-block;
+    border: 1px solid black;
   }
 
   div.playerdata {
     z-index: 10;
   }
 
-  div.playerdatabg.TURN {
+  div.playerinfo.TURN {
     box-shadow: 0px 0px 40px 40px #9999eedd;
   }
   div.myhand {
@@ -361,25 +376,28 @@
   }
 
   div.playername {
+    writing-mode: vertical-lr;
+    text-orientation: upright;
     text-transform: uppercase;
-    padding: 5pt;
+    padding: 2px;
     font-size: 20pt;
     font-weight: bold;
-    height: 24px;
-    display: block;
+    height: 180px;
+    padding-left: 8px;
+    display: inline-block;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 180px
+    width: 40px;
   }
   div.cash {
     display: inline-block;
-    width: 220px;
+    width: 320px;
     text-align: right;
     padding-top: 5px;
     font-weight: bold;
     font-size: 20pt;
-    color: darkred;
+    color: gold;
   }
 
   div.pot {
@@ -390,20 +408,26 @@
     height: 40px;
     width: 220px;
     margin-left: -75px;
-    top: 340px;
-    left: 550px;
+    top: 58%;
+    left: 50%;
   }
 
   div.playerbet {
     position: absolute;
     display: inline-block;
     padding: 0px;
-    height: 60px;
-    width: 120px;
+    height: 120px;
+    width: 240px;
     margin-left: -75px;
     text-align: left;
     font-size: 18pt;
     font-weight: bold;
+  }
+
+  div.pbcards {
+    float: right;
+    transform-origin: 0 0;
+    transform: scale(0.8);
   }
 
   div.potchip {
@@ -417,15 +441,13 @@
     font-size: 20pt;
     color: gold;
     font-weight: bold;
-    -webkit-text-stroke-width: 1px;
-    -webkit-text-stroke-color: black;
-    text-stroke-width: 1px;
-    text-stroke-color: black;
   }
 
   div.betchip {
+    position: absolute;
+    left: 5px;
+    top: 60px;
     width: 80px;
-    position: relative;
     background-image: url('/betchip.png');
     background-repeat: no-repeat;
     background-size: 30px 30px;
@@ -434,33 +456,46 @@
     font-size: 20pt;
     color: gold;
     font-weight: bold;
-    -webkit-text-stroke-width: 1px;
-    -webkit-text-stroke-color: black;
-    text-stroke-width: 1px;
-    text-stroke-color: black;
   }
 
-  div.seat4bet div.dealerbutton {
-    left: 85px;
+  div.stackchip {
+    background-image: url('/betchip.png');
+    background-repeat: no-repeat;
+    background-size: 30px 30px;
+    display: inline-block;
+    height: 30px;
+    width: 30px;
+    float: right;
+    margin-left: 5px;
   }
 
-  div.seat5bet div.dealerbutton {
-    left: 85px;
+  div.seat4bet, div.seat5bet {
+    text-align: right;
   }
 
   div.seat4bet div.betchip {
-    background-position: 85px 0px;
-    padding-left: 0px;
-    padding-right: 33px;
-    text-align: right;
+    left: auto;
+    right: 55px;
   }
 
   div.seat5bet div.betchip {
-    background-position: 85px 0px;
-    padding-left: 0px;
-    padding-right: 33px;
-    text-align: right;
+    left: auto;
+    right: 55px;
   }
+
+  div.seat0bet div.dealerbutton {
+    left: 15px;
+    top: -35px;
+  }
+
+  div.seat9bet div.dealerbutton {
+    bottom: -15px;
+    left: 15px;
+  }
+
+  div.seat1bet div.dealerbutton { top: 15px; }
+  div.seat2bet div.dealerbutton { top: 15px; }
+  div.seat3bet div.dealerbutton { top: 15px; }
 
   div.smallpiles {
     width: 1200px;
@@ -507,11 +542,10 @@
     display: block;
     height: 80px;
     position: absolute;
-    top: 485px;
-    left: 480px;
-    transform-origin: 0 0;
-    transform: scale(0.65);
-    margin-left: -100px;
+    top: 50%;
+    left: 50%;
+    margin-left: -180px;
+    margin-top: -40px;
   }
 
   div.board .cardwrap:not(:first-child) {
@@ -529,8 +563,8 @@
     position: relative;
     background-image: url('/pokertable.png');
     height: 1080px;
-    width: 1080px;
-    background-size: 1000px 1000px;
+    width: 1680px;
+    background-size: 1600px 1000px;
     background-repeat: no-repeat;
     background-position: 40px 40px;
     transform-origin: 0 0;
@@ -540,8 +574,8 @@
   div#tables {
     vertical-align: top;
     display: inline-block;
-    height: 290px;
-    width: 580px;
+    height: 540px;
+    width: 940px;
   }
 
   div.betplaque button {
@@ -614,18 +648,6 @@
     padding: 5px;
     margin-top: 5px;
     margin-bottom: 5px;
-  }
-
-  .playerimage {
-    width: 240px;
-    height: 160px;
-    display: inline-block;
-  }
-
-  .playercamera {
-    background-color: black;
-    display: inline-block;
-    border: 1px solid black;
   }
 
   body {

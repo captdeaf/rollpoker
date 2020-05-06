@@ -55,17 +55,17 @@ var RollPoker = {
     var rWidth = 600;
     if (win.width() < win.height()) {
       // Portrait, we make width fit.
-      var wantedWidth = 590;
+      var wantedWidth = 940;
       var maxWidth = $(window).width();
       RollPoker.Scale = (Math.floor((maxWidth * 100)/ wantedWidth)) / 100;
     } else {
       // Landscape, we need to fit width to 1/2 the width
-      rWidth = 1200;
-      var wantedWidth = 590;
+      rWidth = 1900;
+      var wantedWidth = 940;
       var maxWidth = $(window).width() / 2;
       RollPoker.Scale = (Math.floor((maxWidth * 100)/ wantedWidth)) / 100;
     }
-    if (RollPoker.Scale > 1.0) RollPoker.Scale = 1.0;
+    if (RollPoker.Scale > 1.5) RollPoker.Scale = 1.5;
     RollPoker.Scales = "scale(" + RollPoker.Scale + ")";
     $("#sizer").css({
       "-webkit-transform": RollPoker.Scales,
@@ -75,6 +75,7 @@ var RollPoker = {
       "transform": RollPoker.Scales,
       "width": rWidth,
     });
+    VidChat.Update();
   },
   Setup: function() {
     // First make sure we have our game name.

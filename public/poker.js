@@ -60,7 +60,6 @@ var Render = {
     return '<div class="cardwrap"><div class="card ' + cardval + '"></div></div>'
   },
   Chips: function(chips, cls) {
-    return chips;
     if (!cls) {
       cls = "betchip";
     }
