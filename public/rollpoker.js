@@ -32,7 +32,10 @@ var RollPoker = {
     firebase.auth().onAuthStateChanged(function(user) {
       if (user) {
         console.log("Registered as " + user.displayName);
-        Player.uid = user.uid;
+        if (Player.uid != user.uid) {
+          Player.uid = user.uid;
+          VidChat.init(Player.uid);
+        }
         Player.authuser = user;
         cb();
       } else {
@@ -98,10 +101,14 @@ var RollPoker = {
   },
   UpdateActivity: function() {
     var actref = RollPoker.DB.doc("/games/" + Game.name + "/act/" + Player.uid);
-    actref.set({
+    var doc = {
       timestamp: RollPoker.Timestamp(),
       activity: RollPoker.LAST_ACTIVITY,
-    });
+    };
+    if (VidChat.PeerId) {
+      doc.peerid = VidChat.PeerId;
+    }
+    actref.set(doc);
   },
   UpdatePresences: function() {
     var actref = RollPoker.DB.collection("/games/" + Game.name + "/act/");
@@ -132,6 +139,9 @@ var RollPoker = {
           changed = true;
           Presences[pid] = presence;
         }
+        if (pid != Player.uid && activity.peerid && presence == "Active") {
+          VidChat.Connect(activity.peerid);
+        }
       });
       if (changed) {
         RollPoker.Update(Game.data);
@@ -153,7 +163,7 @@ var RollPoker = {
       });
     }
     var eventmap = {
-      "tap click": "Click",
+      "touchstart click": "Click",
       "submit": "Submit",
       "change": "Change",
       "keydown": "KeyDown",
@@ -162,8 +172,6 @@ var RollPoker = {
     for (var ename in eventmap) {
       bind(ename, eventmap[ename]);
     }
-    // Mouse and Touch events, we roll our own "click" because of
-    // the need for delayed activation w/ the Fold, Call and Bet buttons.
     // Every half second we tick the Handler, in case of
     // timed events (such as countdown for tournament blinds,
     // and idle players not responding.)
@@ -172,7 +180,7 @@ var RollPoker = {
         RollPoker.Handler.OnSecond();
       }
     }, 500);
-    // Every 15 seconds we update our "Presence" document.
+    // Every 5 seconds we update our "Presence" document.
     RollPoker.ACTIVITY_TIMER = setInterval(function() {
       // If we are active within past 30 minutes, we update.
       // Otherwise we're equivalent to offline.
@@ -180,15 +188,15 @@ var RollPoker = {
       if ((now - RollPoker.LAST_ACTIVITY) < (30*60)) {
         RollPoker.UpdateActivity();
       }
-    }, 15000);
-    // And if we're not idle, every 30 seconds we update
+    }, 5000);
+    // And if we're not idle, every 10 seconds we update
     // all player presence from documents.
     RollPoker.PRESENCE_TIMER = setInterval(function() {
       var now = RollPoker.Timestamp();
       if ((now - RollPoker.LAST_ACTIVITY) < (30*60)) {
         RollPoker.UpdatePresences();
       }
-    }, 30000)
+    }, 10000)
   },
   IsHost: false,
   Update: function(doc) {
@@ -207,6 +215,8 @@ var RollPoker = {
       if (RollPoker.Handler) {
         RollPoker.Handler.init();
         RollPoker.Handler.Start();
+        VidChat.Update();
+        setTimeout(VidChat.Update, 1000);
       }
     }
     if (RollPoker.Handler) {
