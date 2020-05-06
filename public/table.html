@@ -59,7 +59,7 @@
       <div id="<%= player.PlayerId %>" class="playerinfo <%= seat %> <%= player.State %>">
         <div class="playername"><%= player.DisplayName %></div>
         <div class="playerimage" id="vid-<%= player.PlayerId %>"></div>
-        <div class="cash"><%= Render.Commas(123456) %><div class="stackchip"></div></div>
+        <div class="cash"><%= Render.Commas(player.Chips) %><div class="stackchip"></div></div>
       </div>
       <div class="<%= seat %>bet playerbet">
         <%= player.DisplayState %>
@@ -75,7 +75,7 @@
           <% } %>
         </div>
         <% if (player.Bet > 0) { %>
-        <div class="betamt"><%= Render.Chips(123456) %></div>
+        <div class="betamt"><%= Render.Chips(player.Bet) %></div>
         <% } %>
         <% if (true || seat == table.Dealer) { %>
           <div class="dealerbutton"></div>
@@ -197,7 +197,7 @@
       <div id="signups">
         <% for (var uid in data.Players) { var pl = data.Players[uid]; %>
         <div class="playerlisting <%= Presences[pl.PlayerId] %>" id="<%= uid %>">
-          <div class="playername">
+          <div class="signupname">
             <%= pl.DisplayName %><% if (Player.uid == uid) { %> (You!)<% } %>
           </div>
           <% if (pl.PlayerId == Player.uid) { %>
